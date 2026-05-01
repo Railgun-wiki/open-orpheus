@@ -3,7 +3,19 @@
 
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar";
+  import * as Dialog from "$lib/components/ui/dialog";
+
   import Logo from "../../../assets/icon.svg";
+
+  import GitHub from "$lib/assets/GitHub_Invertocat_Black_Clearspace.svg";
+
+  const socials = [
+    {
+      name: "GitHub",
+      link: "https://github.com/YUCLing/open-orpheus",
+      icon: GitHub,
+    },
+  ];
 
   import PackageIcon from "@lucide/svelte/icons/package";
   import Package from "./Package.svelte";
@@ -59,16 +71,56 @@
     collapsible="none"
     class="h-screen min-w-64 border-r-2 border-gray-200/50"
   >
-    <Sidebar.Header
-      class="grid grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-0"
-    >
-      <img
-        src={Logo}
-        alt="Logo"
-        class="row-span-2 mr-2 h-10 w-10 self-center"
-      />
-      <h1 class="text-xl font-bold">Open Orpheus</h1>
-      <p class="text-xs opacity-75">v{__APP_VERSION__}</p>
+    <Sidebar.Header>
+      <Sidebar.Menu>
+        <Sidebar.MenuItem>
+          <Dialog.Root>
+            <Dialog.Trigger>
+              {#snippet child({ props })}
+                <Sidebar.MenuButton
+                  {...props}
+                  class="grid h-auto cursor-pointer grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-0"
+                >
+                  <img
+                    src={Logo}
+                    alt="Logo"
+                    class="row-span-2 mr-2 h-10 w-10 self-center"
+                  />
+                  <h1 class="text-xl font-bold">Open Orpheus</h1>
+                  <p class="text-xs opacity-75">v{__APP_VERSION__}</p>
+                </Sidebar.MenuButton>
+              {/snippet}
+            </Dialog.Trigger>
+            <Dialog.Content>
+              <div class="text-center">
+                <img src={Logo} alt="Logo" class="m-auto h-24 w-24" />
+                <h1 class="text-3xl font-bold">Open Orpheus</h1>
+                <p>v{__APP_VERSION__}</p>
+              </div>
+              <div class="flex justify-center">
+                {#each socials as social (social.name)}
+                  <a
+                    href={social.link}
+                    target="_blank"
+                    title={social.name}
+                    rel="external"
+                    class="block opacity-75 hover:opacity-100"
+                  >
+                    <img src={social.icon} alt={social.name} class="h-8 w-8" />
+                  </a>
+                {/each}
+              </div>
+              <div class="text-center">
+                <p>
+                  Open Orpheus
+                  是一个以互操作性为目的的独立开源项目，与网易公司没有任何关联、授权或认可关系。
+                </p>
+                <p>"网易云音乐"、"Orpheus" 等名称及相关商标归网易公司所有。</p>
+              </div>
+            </Dialog.Content>
+          </Dialog.Root>
+        </Sidebar.MenuItem>
+      </Sidebar.Menu>
     </Sidebar.Header>
     <Sidebar.Content>
       <Sidebar.Group>
