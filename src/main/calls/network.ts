@@ -10,7 +10,16 @@ import client from "../request";
 let globalFailCount = 0;
 let globalSucCount = 0;
 
-type NetworkFetchResponse = {
+export type NetworkFetchRequest = {
+  url: string;
+  method: Method;
+  headers: Record<string, string>;
+  body: string;
+  retryCount: number;
+  isDecrypt?: boolean;
+};
+
+export type NetworkFetchResponse = {
   code: number;
   error: string;
 } & Partial<{
@@ -21,95 +30,88 @@ type NetworkFetchResponse = {
   status: number;
   blob: string;
 }>;
-registerCallHandler<
-  [
-    {
-      url: string;
-      method: string;
-      headers: Record<string, string>;
-      body: string;
-      retryCount: number;
-      isDecrypt?: boolean;
-    },
-  ],
-  [NetworkFetchResponse]
->("network.fetch", async (_, request): Promise<[NetworkFetchResponse]> => {
-  const retryCount = request.retryCount ?? 1;
-  try {
-    const response = await client(request.url, {
-      method: request.method as Method,
-      headers: {
-        ...request.headers,
-      },
-      body: request.body || undefined,
-      throwHttpErrors: false,
-      retry: {
-        limit: retryCount,
-        backoffLimit: 10000,
-      },
-      hooks: {
-        beforeRetry: [
-          () => {
-            globalFailCount++;
-          },
-        ],
-      },
-    });
 
-    const headers: Record<string, string> = {};
-    for (const [key, value] of Object.entries(response.headers)) {
-      if (Array.isArray(value)) {
-        headers[key] = value.join(", ");
-      } else if (value !== undefined) {
-        headers[key] = value;
+registerCallHandler<[NetworkFetchRequest], [NetworkFetchResponse]>(
+  "network.fetch",
+  async (_, request): Promise<[NetworkFetchResponse]> => {
+    const retryCount = request.retryCount ?? 1;
+
+    try {
+      const response = await client(request.url, {
+        method: request.method,
+        headers: {
+          ...request.headers,
+        },
+        body: request.body || undefined,
+        throwHttpErrors: false,
+        retry: {
+          limit: retryCount,
+          backoffLimit: 10000,
+        },
+        hooks: {
+          beforeRetry: [
+            () => {
+              globalFailCount++;
+            },
+          ],
+        },
+      });
+
+      const headers: Record<string, string> = {};
+      for (const [key, value] of Object.entries(response.headers)) {
+        if (Array.isArray(value)) {
+          headers[key] = value.join(", ");
+        } else if (value !== undefined) {
+          headers[key] = value;
+        }
       }
-    }
 
-    const responseBody = Buffer.from(response.rawBody);
-    const blob = request.isDecrypt
-      ? deserialData(
-          responseBody.buffer.slice(
-            responseBody.byteOffset,
-            responseBody.byteOffset + responseBody.byteLength
+      const responseBody = Buffer.from(response.rawBody);
+      const blob = request.isDecrypt
+        ? deserialData(
+            responseBody.buffer.slice(
+              responseBody.byteOffset,
+              responseBody.byteOffset + responseBody.byteLength
+            )
           )
-        )
-      : responseBody.toString();
+        : responseBody.toString();
 
-    globalSucCount++;
+      globalSucCount++;
 
-    return [
-      {
-        code: 0,
-        blob,
-        error: "",
-        globalFailCount,
-        globalSucCount,
-        headers,
-        retryTimes: retryCount - response.retryCount - 1,
-        status: response.statusCode,
-      },
-    ];
-  } catch (error) {
-    globalFailCount++;
-    const retryTimes =
-      error instanceof RequestError && error.request
-        ? retryCount - error.request.retryCount - 1
-        : 0;
+      return [
+        {
+          code: 0,
+          blob,
+          error: "",
+          globalFailCount,
+          globalSucCount,
+          headers,
+          retryTimes: retryCount - response.retryCount - 1,
+          status: response.statusCode,
+        },
+      ];
+    } catch (error) {
+      globalFailCount++;
+      const retryTimes =
+        error instanceof RequestError && error.request
+          ? retryCount - error.request.retryCount - 1
+          : 0;
 
-    return [
-      {
-        code: 28,
-        error:
-          (error as Error)?.message ||
-          (error ? String(error) : "Unknown error"),
-        status: 0,
-        blob: "",
-        headers: {},
-        retryTimes,
-      },
-    ];
+      return [
+        {
+          code: 28,
+          error:
+            (error as Error)?.message ||
+            (error ? String(error) : "Unknown error"),
+          status: 0,
+          blob: "",
+          headers: {},
+          retryTimes,
+        },
+      ];
+    }
   }
-});
+);
 
 registerCallHandler<
   [],

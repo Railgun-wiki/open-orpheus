@@ -223,12 +223,6 @@ export default class Player extends EventTarget {
 
     this._audioSourceNode.connect(this._gainNode);
     this._gainNode.connect(this._audioCtx.destination);
-
-    this._audio.addEventListener("canplay", () => {
-      this.dispatchEvent(
-        new CustomEvent("load", { detail: { id: this.currentId } })
-      );
-    });
   }
 
   private async _ensurePcmTapReady() {
@@ -291,6 +285,15 @@ export default class Player extends EventTarget {
   async load(playInfo: AudioPlayInfo): Promise<HTMLAudioElement> {
     this._playInfo = playInfo;
     this.dispatchEvent(new CustomEvent("playinfoupdate"));
+    this._audio.addEventListener(
+      "canplay",
+      () => {
+        this.dispatchEvent(
+          new CustomEvent("load", { detail: { id: this.currentId } })
+        );
+      },
+      { once: true }
+    );
     this._audio.src = `audio://audio/${playInfo.songId}`;
     this._audio.load();
     return this._audio;
