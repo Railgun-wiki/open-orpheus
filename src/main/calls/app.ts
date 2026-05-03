@@ -296,14 +296,6 @@ registerCallHandler<[string, string, "", string], void>(
   }
 );
 
-registerCallHandler<[{ path: string; pathtype: string }], [boolean]>(
-  "app.systemVoiceHint",
-  () => {
-    // TODO: Expand what we get from official client (`resource` folder), so we can have the corresponding resource for this
-    return [true];
-  }
-);
-
 registerCallHandler<[], [{ fullscreen: boolean; self: boolean }]>(
   "app.isAppFulllScreen",
   (event) => {

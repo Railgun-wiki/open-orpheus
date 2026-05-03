@@ -1,4 +1,5 @@
 import { SECRET_KEY } from "../../constants";
+import { player } from "../audioplayer";
 import { registerCallHandler } from "../calls";
 import { fireNativeCall } from "../channel";
 
@@ -84,5 +85,25 @@ registerCallHandler<[string, string, object], void>(
         });
         break;
     }
+  }
+);
+
+registerCallHandler<[{ path: string; pathtype: string }], void>(
+  "app.systemVoiceHint",
+  async (voice) => {
+    if (voice.pathtype !== "resource") {
+      console.warn("Unsupported voice hint type", voice.pathtype);
+      return;
+    }
+
+    const audio = new Audio();
+    audio.src = `audio://resource/${voice.path}`;
+    audio.crossOrigin = "anonymous";
+    const source = player.audioContext.createMediaElementSource(audio);
+    source.connect(player.gainNode);
+    audio.addEventListener("ended", () => {
+      source.disconnect();
+    });
+    await audio.play();
   }
 );

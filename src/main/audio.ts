@@ -1,14 +1,17 @@
-import path from "node:path";
+import path, { join } from "node:path";
 import { readFile } from "node:fs/promises";
 
 import { ipcMain, Protocol } from "electron";
+import mime from "mime";
 
 import AudioStreamer from "./audio/streamer";
 
 import type { AudioPlayInfo } from "../preload/Player";
 import { mainWindow } from "./window";
 import { playCacheManager } from "./cache";
-import { normalizePath } from "./util";
+import { normalizePath, sanitizeRelativePath } from "./util";
+import { pack as packageDir } from "./folders";
+import { stringifyError } from "../util";
 
 const audioStreamer = new AudioStreamer();
 
@@ -69,6 +72,29 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
         if (!songId) return new Response("Missing song ID", { status: 400 });
 
         return audioStreamer.handleRequest(songId, request);
+      }
+      case "resource": {
+        const type = mime.getType(requestUrl.pathname);
+        if (!type?.startsWith("audio/"))
+          return new Response("Unsupported resource", { status: 400 });
+
+        const fullPath = sanitizeRelativePath(
+          join(packageDir, "resource"),
+          requestUrl.pathname
+        );
+        if (fullPath === false)
+          return new Response("Not Found", { status: 404 });
+
+        try {
+          const content = await readFile(fullPath);
+          return new Response(content, {
+            headers: {
+              "Content-Type": type,
+            },
+          });
+        } catch (err) {
+          return new Response(stringifyError(err), { status: 500 });
+        }
       }
     }
     return new Response("Not Found", { status: 404 });
