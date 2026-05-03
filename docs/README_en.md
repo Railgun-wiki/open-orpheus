@@ -56,17 +56,11 @@ Resources are stored in the `package` subfolder of the data directory:
 - Development: `data/package/` (relative to working directory)
 - Packaged: `{userData}/package/`
 
-#### `package` folder
+#### `package` and `resource` folders
 
-The entire `package` folder is required.
+The entire `package` and `resource` folders are required.
 
-If the automatic download fails, you can manually copy the entire `package` folder from your official NetEase Cloud Music installation (e.g. `C:\path\to\your\installation\CloudMusic\package`) into the data directory above.
-
-#### `web.pack` file (optional)
-
-An updated web resource pack produced by the official NetEase Cloud Music client, found at `C:\Users\<YOUR_USERNAME>\AppData\Local\NetEase\CloudMusic\web.pack`. Copy it into the `package` folder alongside `orpheus.ntpk`. If present, Open Orpheus will prefer it over `orpheus.ntpk`.
-
-It is generally not recommended to use a too-recent web resource pack, as it may cause compatibility issues.
+If the automatic download fails, you can manually copy both folders from your official NetEase Cloud Music installation (e.g. `C:\path\to\your\installation\CloudMusic\package`) into the data directory above. **Note: `package` is a subfolder of the data directory's `package` folder, meaning the final structure should be `package/package/`!**
 
 ## Disclaimer
 

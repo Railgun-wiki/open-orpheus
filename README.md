@@ -53,20 +53,16 @@ https://aur.archlinux.org/packages/open-orpheus
 
 Open Orpheus 在首次启动时如果检测到资源缺失，会自动从网易的 CDN **自动下载**，通常无需手动配置。
 
-资源存放在数据目录的 `package` 子文件夹中：
+资源存放在数据目录的子文件夹 `package` 中：
 
 - 开发模式：`data/package/`（相对于工作目录）
 - 打包后：`{userData}/package/`
 
-#### `package` 文件夹
+#### `package` 和 `resource` 文件夹
 
-整个 `package` 文件夹都是必需的。
+整个 `package` 和 `resource` 文件夹都是必需的。
 
-如果自动下载失败，可以从官方网易云音乐的安装目录手动复制整个 `package` 文件夹，例如 `C:\path\to\your\installation\CloudMusic\package`，并将其放入上述数据目录中。
-
-#### `web.pack` 文件（可选）
-
-官方网易云音乐客户端生成的最新 Web 资源包，一般位于 `C:\Users\<YOUR_USERNAME>\AppData\Local\NetEase\CloudMusic\web.pack`。将它复制到 `package` 文件夹中（与 `orpheus.ntpk` 放在一起）。如果存在，Open Orpheus 会优先使用它而不是 `orpheus.ntpk`。
+如果自动下载失败，可以从官方网易云音乐的安装目录手动复制这两个文件夹，例如 `C:\path\to\your\installation\CloudMusic\package`，并将其放入上述数据目录中。**注意：`package` 是 `package` 文件夹的子文件夹，也就是说复制完后应该是 `package/package/`！**
 
 ## 免责声明
 
