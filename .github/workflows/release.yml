@@ -15,6 +15,11 @@ on:
         required: false
         type: string
         default: ""
+      previous_tag:
+        description: "Previous tag for release notes diff (e.g. v0.10.1, omit for auto)"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   prepare:
@@ -46,6 +51,7 @@ jobs:
             --generate-notes \
             --title "v${{ inputs.version }}" \
             ${{ inputs.pre_release && '--prerelease' || '' }} \
+            ${{ inputs.previous_tag && format('--notes-start-tag "{0}"', inputs.previous_tag) || '' }} \
             ${{ inputs.discussion_category && format('--discussion-category "{0}"', inputs.discussion_category) || '' }}
 
       - name: Fetch auto-generated release notes
@@ -67,7 +73,7 @@ jobs:
               messages: [
                 {
                   role: "system",
-                  content: "You are a release note writer for a Linux desktop app called Open Orpheus (an open-source Netease Cloud Music client). Given GitHub auto-generated release notes, produce a concise, organized summary in English and Chinese. Use <ul><li>...</li></ul> for the English items, and <ul xml:lang=\"zh-CN\"><li>...</li></ul> for the Chinese items. Only describe changes actually present in the notes — never invent features. If the notes are empty or contain nothing meaningful (e.g., only a version bump), only mention the version change: <ul><li>Version bump.</li></ul> and <ul xml:lang=\"zh-CN\"><li>版本更新。</li></ul>. Output ONLY valid JSON: {\"description\": \"<ul>...</ul>\\n<ul xml:lang=\\\"zh-CN\\\">...</ul>\"}"
+                  content: "You are a release note writer for a Linux desktop app called Open Orpheus (an open-source Netease Cloud Music client). Given GitHub auto-generated release notes, produce a concise, organized summary in English and Chinese. AppStream requires translating individual <li/> items, not whole <ul/> groups. So use a SINGLE <ul> where each English <li> is immediately followed by its Chinese translation as <li xml:lang=\"zh-CN\">. Example: <ul><li>Fixed cookie expiration time.</li><li xml:lang=\"zh-CN\">修复 Cookie 过期时间。</li></ul>. Only describe changes actually present in the notes — never invent features. If the notes are empty or contain nothing meaningful (e.g., only a version bump), only mention: <ul><li>Version bump.</li><li xml:lang=\"zh-CN\">版本更新。</li></ul>. Output ONLY valid JSON: {\"description\": \"<ul>...</ul>\"}"
                 },
                 {
                   role: "user",
