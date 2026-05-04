@@ -7,6 +7,11 @@ on:
         description: GitHub Actions runner label
         required: true
         type: string
+      ref:
+        description: Git ref to checkout (defaults to caller's ref)
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -16,6 +21,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5

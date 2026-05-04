@@ -1,9 +1,8 @@
 name: Publish to Flathub
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
@@ -20,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
