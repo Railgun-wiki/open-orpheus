@@ -42,6 +42,24 @@ jobs:
           jq --arg v "${{ inputs.version }}" '.version = $v' package.json > tmp.json
           mv tmp.json package.json
 
+      - name: Clean up existing release if any
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ inputs.version }}"
+          if gh release view "$TAG" --json isDraft -q '.isDraft' 2>/dev/null; then
+            IS_DRAFT=$(gh release view "$TAG" --json isDraft -q '.isDraft')
+            if [ "$IS_DRAFT" = "true" ]; then
+              echo "Deleting existing draft release $TAG"
+              gh release delete "$TAG" --yes
+            else
+              echo "::error::Release $TAG is already published. Aborting."
+              exit 1
+            fi
+          else
+            echo "No existing release found for $TAG, proceeding."
+          fi
+
       - name: Create draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -185,6 +203,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
 
     steps:
       - name: Checkout for git context
