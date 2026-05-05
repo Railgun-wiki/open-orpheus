@@ -14,6 +14,29 @@
   let playing = $state(false);
   let locked = $state(false);
   let unlockButton: HTMLButtonElement | null = $state(null);
+  let rootEl: HTMLDivElement | null = $state(null);
+
+  $effect(() => {
+    const btn = unlockButton;
+    const root = rootEl;
+    if (locked && btn && root) {
+      const update = () => {
+        const r = btn.getBoundingClientRect();
+        api.setInputRegion(r.x, r.y, r.width, r.height);
+      };
+      update();
+
+      const observer = new ResizeObserver(() => update());
+      observer.observe(root);
+      observer.observe(btn);
+      return () => {
+        observer.disconnect();
+        api.setInputRegion(0, 0, 0, 0);
+      };
+    } else {
+      api.setInputRegion(0, 0, 0, 0);
+    }
+  });
 
   const items: ([string, string, string] | [string, string, string, true])[] =
     $derived([
@@ -131,6 +154,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+  bind:this={rootEl}
   class={cn(
     "group flex h-screen w-screen items-center justify-evenly overflow-hidden rounded-lg p-2 select-none",
     !locked && "hover:bg-black/40"

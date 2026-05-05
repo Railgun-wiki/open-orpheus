@@ -2,7 +2,14 @@ import os from "node:os";
 
 import { app, BrowserWindow, shell } from "electron";
 
-import { getLastCreatedWindowId, isWayland } from "@open-orpheus/window";
+import {
+  getLastCreatedWindowId,
+  isWayland,
+  createRegion,
+  destroyRegion,
+  regionAdd,
+  setInputRegion,
+} from "@open-orpheus/window";
 
 import AppMenu from "./menu";
 
@@ -163,19 +170,34 @@ export function getWindowProp<T>(
 
 export function setWindowInputRegion(
   wnd: BrowserWindow,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   x: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   y: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   width: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   height: number
 ) {
   if (os.platform() === "linux" && isWayland()) {
     const props = windowProperties.get(wnd.id);
     if (!props || !props.waylandId) return;
-    // TODO: Find a way to set input region
+
+    if (width <= 0 || height <= 0) {
+      setInputRegion(props.waylandId, null);
+      return;
+    }
+
+    const regionToken = createRegion(props.waylandId);
+    if (!regionToken) return;
+
+    if (!regionAdd(regionToken, x, y, width, height)) {
+      destroyRegion(regionToken);
+      return;
+    }
+
+    if (!setInputRegion(props.waylandId, regionToken)) {
+      destroyRegion(regionToken);
+      return;
+    }
+
+    destroyRegion(regionToken);
   } else {
     // TODO: implement input region for non-wayland / non-linux platforms
   }

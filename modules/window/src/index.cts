@@ -14,6 +14,26 @@ declare module "./load.cjs" {
   function captureNextWindowFirstCursorEnter(
     callback: (x: number, y: number) => void
   ): void;
+  function createRegion(windowId: string): string | null;
+  function destroyRegion(regionToken: string): boolean;
+  function regionAdd(
+    regionToken: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number
+  ): boolean;
+  function regionSubtract(
+    regionToken: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number
+  ): boolean;
+  function setInputRegion(
+    windowId: string,
+    regionToken: string | null
+  ): boolean;
 }
 
 export function dragWindow(hwnd: Buffer): void {
@@ -43,4 +63,54 @@ export function captureNextWindowFirstCursorEnter(
     );
   }
   addon.captureNextWindowFirstCursorEnter(callback);
+}
+
+export function createRegion(windowId: string): string | null {
+  if (os.platform() !== "linux") {
+    throw new Error("createRegion is only supported on Linux");
+  }
+  return addon.createRegion(windowId);
+}
+
+export function destroyRegion(regionToken: string): boolean {
+  if (os.platform() !== "linux") {
+    throw new Error("destroyRegion is only supported on Linux");
+  }
+  return addon.destroyRegion(regionToken);
+}
+
+export function regionAdd(
+  regionToken: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): boolean {
+  if (os.platform() !== "linux") {
+    throw new Error("regionAdd is only supported on Linux");
+  }
+  return addon.regionAdd(regionToken, x, y, w, h);
+}
+
+export function regionSubtract(
+  regionToken: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): boolean {
+  if (os.platform() !== "linux") {
+    throw new Error("regionSubtract is only supported on Linux");
+  }
+  return addon.regionSubtract(regionToken, x, y, w, h);
+}
+
+export function setInputRegion(
+  windowId: string,
+  regionToken: string | null
+): boolean {
+  if (os.platform() !== "linux") {
+    throw new Error("setInputRegion is only supported on Linux");
+  }
+  return addon.setInputRegion(windowId, regionToken);
 }

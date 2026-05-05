@@ -74,6 +74,46 @@ fn drag_window<'cx>(cx: &mut Cx<'cx>, handle: Handle<JsBuffer>) -> NeonResult<()
 }
 
 #[neon::export]
+fn create_region(window_id: String) -> Option<String> {
+    wayland::create_region_for_window(&window_id).map(|r| r.to_token())
+}
+
+#[neon::export]
+fn destroy_region(region_token: String) -> bool {
+    if let Some(region) = wayland::WlRegion::from_token(&region_token) {
+        wayland::destroy_region(&region)
+    } else {
+        false
+    }
+}
+
+#[neon::export]
+fn region_add(region_token: String, x: f64, y: f64, w: f64, h: f64) -> bool {
+    if let Some(region) = wayland::WlRegion::from_token(&region_token) {
+        wayland::region_add(&region, x as i32, y as i32, w as i32, h as i32)
+    } else {
+        false
+    }
+}
+
+#[neon::export]
+fn region_subtract(region_token: String, x: f64, y: f64, w: f64, h: f64) -> bool {
+    if let Some(region) = wayland::WlRegion::from_token(&region_token) {
+        wayland::region_subtract(&region, x as i32, y as i32, w as i32, h as i32)
+    } else {
+        false
+    }
+}
+
+#[neon::export]
+fn set_input_region(window_id: String, region_token: Option<String>) -> bool {
+    let region = region_token
+        .as_deref()
+        .and_then(wayland::WlRegion::from_token);
+    wayland::set_input_region(&window_id, region.as_ref())
+}
+
+#[neon::export]
 fn capture_next_window_first_cursor_enter<'cx>(
     cx: &mut Cx<'cx>,
     callback: Handle<'cx, JsFunction>,
