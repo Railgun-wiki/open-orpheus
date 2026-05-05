@@ -17,7 +17,6 @@ struct WaylandConn {
     wl_to_top: HashMap<u32, u32>,
     top_to_xdg: HashMap<u32, u32>,
     compositor_id: Option<u32>,
-    next_injected_id: u32,
     injected_ids: HashSet<u32>,
     stolen_ids: Vec<u32>,
 }
@@ -34,7 +33,6 @@ impl WaylandConn {
             wl_to_top: HashMap::new(),
             top_to_xdg: HashMap::new(),
             compositor_id: None,
-            next_injected_id: 0xFE000000,
             injected_ids: HashSet::new(),
             stolen_ids: Vec::new(),
         }
