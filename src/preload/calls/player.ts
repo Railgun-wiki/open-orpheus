@@ -5,23 +5,11 @@ import type { TextAlignType } from "../Player";
 import { registerCallHandler } from "../calls";
 import { transformLyricStyle } from "../desktopLyrics";
 import { fireNativeCall } from "../channel";
+import type { PlayInfo } from "../../main/calls/player";
 
 let currentMetadata: MediaMetadata | null = null;
 
-registerCallHandler<
-  [
-    {
-      albumId: string;
-      albumName: string;
-      artistName: string;
-      playId: string;
-      songName: string;
-      songType: string;
-      url: string;
-    },
-  ],
-  void
->("player.setInfo", (playInfo) => {
+registerCallHandler<[PlayInfo], void>("player.setInfo", (playInfo) => {
   if (!playInfo.playId) {
     navigator.mediaSession.metadata = currentMetadata = null;
     return;
@@ -36,6 +24,8 @@ registerCallHandler<
       type: "image/jpeg",
     })),
   });
+  // Forward to main process
+  ipcRenderer.invoke("channel.call", "player.setInfo", playInfo);
 });
 
 // TODO: Link mediaSession
@@ -43,41 +33,7 @@ registerCallHandler<[boolean], void>("player.setSMTCEnable", () => {
   return;
 });
 
-registerCallHandler<[string], [boolean]>("player.addListElement", () => {
-  return [true];
-});
-
-registerCallHandler<[], [boolean]>("player.removeAll", () => {
-  return [true];
-});
-
-registerCallHandler<[string], [boolean]>("player.setCurrentPlay", () => {
-  return [true];
-});
-
-registerCallHandler<[string], [boolean]>("player.setCover", () => {
-  return [true];
-});
-
-registerCallHandler<[number /* 0 or 1? */], [boolean]>(
-  "player.setLikeMark",
-  () => {
-    return [true];
-  }
-);
-
 registerCallHandler<[number], [boolean]>("player.setTotalTime", () => {
-  return [true];
-});
-
-registerCallHandler<
-  [
-    {
-      playstate: number; // 0 or 1?
-    },
-  ],
-  [boolean]
->("player.setMiniPlayerState", () => {
   return [true];
 });
 

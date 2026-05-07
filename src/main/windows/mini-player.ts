@@ -5,10 +5,63 @@ import { BrowserWindow } from "electron";
 
 import { setWindowId, setWindowInputRegion } from "../window";
 import { registerIpcHandlers } from "../../bridge/register";
-import { MiniPlayerContract } from "../../bridge/contracts/mini-player-api";
+import {
+  MiniPlayerContract,
+  MiniPlayerPlayInfo,
+  MiniPlayerPlayState,
+  MiniPlayerListElement,
+  MiniPlayerFullState,
+} from "../../bridge/contracts/mini-player-api";
 import { dragWindow } from "@open-orpheus/window";
 
 let miniPlayerWindow: BrowserWindow | null = null;
+
+// State
+let playInfo: MiniPlayerPlayInfo | null = null;
+let coverUrl: string | null = null;
+let likeMark = false;
+let currentPlay: string | null = null;
+let playState: MiniPlayerPlayState = { playing: false };
+let listItems: MiniPlayerListElement[] = [];
+
+function sendToMiniPlayer(event: string, data: unknown) {
+  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+    miniPlayerWindow.webContents.send(`miniPlayer.${event}`, data);
+  }
+}
+
+export function updatePlayInfo(info: MiniPlayerPlayInfo | null) {
+  playInfo = info;
+  sendToMiniPlayer("playInfoUpdate", info);
+}
+
+export function updateCoverUrl(url: string | null) {
+  coverUrl = url;
+  sendToMiniPlayer("coverUpdate", url);
+}
+
+export function updateLikeMark(liked: boolean) {
+  likeMark = liked;
+  sendToMiniPlayer("likeUpdate", liked);
+}
+
+export function updatePlayState(playing: boolean) {
+  playState = { playing };
+  sendToMiniPlayer("playStateUpdate", playState);
+}
+
+export function updateListData(
+  items: MiniPlayerListElement[],
+  cp: string | null
+) {
+  listItems = items;
+  currentPlay = cp;
+  sendToMiniPlayer("listUpdate", { items, currentPlay });
+}
+
+export function getFullState(): MiniPlayerFullState {
+  return { playInfo, coverUrl, likeMark, currentPlay, playState, listItems };
+}
 
 export default function createMiniPlayerWindow() {
   miniPlayerWindow = new BrowserWindow({
@@ -17,7 +70,7 @@ export default function createMiniPlayerWindow() {
     transparent: true,
     hasShadow: false,
     frame: false,
-    resizable: true,
+    resizable: false,
     show: false,
     title: "Open Orpheus Mini Player",
     webPreferences: {
@@ -36,6 +89,7 @@ export default function createMiniPlayerWindow() {
     miniPlayerWindow.webContents,
     "miniPlayer",
     {
+      requestFullUpdate: async () => getFullState(),
       dragWindow: async () => {
         if (!miniPlayerWindow || miniPlayerWindow.isDestroyed()) return;
         const hwnd = miniPlayerWindow.getNativeWindowHandle();

@@ -10,3 +10,4 @@ import "./network";
 import "./download";
 import "./rtc";
 import "./update";
+import "./player";

@@ -1,11 +1,56 @@
 <script lang="ts">
   import type { Attachment } from "svelte/attachments";
+  import { onMount } from "svelte";
 
   import { getBridge } from "$lib/bridge";
 
-  import type { MiniPlayerContract } from "$bridge/contracts/mini-player-api";
+  import type {
+    MiniPlayerContract,
+    MiniPlayerFullState,
+    MiniPlayerPlayInfo,
+    MiniPlayerPlayState,
+    MiniPlayerListData,
+  } from "$bridge/contracts/mini-player-api";
 
   const api = getBridge<MiniPlayerContract>("miniPlayer");
+
+  let playInfo = $state<MiniPlayerPlayInfo | null>(null);
+  let coverUrl = $state<string | null>(null);
+  let likeMark = $state(false);
+  let playState = $state<MiniPlayerPlayState>({ playing: false });
+  let listData = $state<MiniPlayerListData>({ items: [], currentPlay: null });
+
+  function applyFullState(state: MiniPlayerFullState) {
+    playInfo = state.playInfo;
+    coverUrl = state.coverUrl;
+    likeMark = state.likeMark;
+    playState = state.playState;
+    listData = { items: state.listItems, currentPlay: state.currentPlay };
+  }
+
+  onMount(async () => {
+    api.events.playInfoUpdate((info) => {
+      playInfo = info;
+    });
+    api.events.coverUpdate((url) => {
+      coverUrl = url;
+    });
+    api.events.likeUpdate((liked) => {
+      likeMark = liked;
+    });
+    api.events.playStateUpdate((state) => {
+      playState = state;
+    });
+    api.events.listUpdate((data) => {
+      listData = data;
+    });
+    api.events.fullStateUpdate(applyFullState);
+
+    const state = await api.requestFullUpdate();
+    if (state) {
+      applyFullState(state);
+    }
+  });
 
   let inputRegionElements: Element[] = [];
 
@@ -71,5 +116,31 @@
   class="h-12.5 border border-gray-400 bg-white"
   onmousedown={() => api.dragWindow()}
   {@attach inputRegionAttachment}
-></div>
-<div class="h-85" {@attach showList && inputRegionAttachment}></div>
+>
+  {#if playInfo}
+    <div class="flex h-full items-center gap-2 px-2 text-xs">
+      {#if coverUrl}
+        <img src={coverUrl} alt="" class="h-8 w-8 rounded object-cover" />
+      {/if}
+      {#if likeMark}
+        <p>Liked</p>
+      {/if}
+      {#if playState.playing}
+        <p>Playing</p>
+      {/if}
+      <span class="truncate">{playInfo.songName}</span>
+      <span class="truncate text-gray-500">{playInfo.artistName}</span>
+    </div>
+  {/if}
+</div>
+<div class="h-85" {@attach showList && inputRegionAttachment}>
+  {#if listData.items.length > 0}
+    <ul class="p-2 text-xs">
+      {#each listData.items as item (item.id)}
+        <li class:font-bold={item.id === listData.currentPlay}>
+          {item.title} - {item.artist}
+        </li>
+      {/each}
+    </ul>
+  {/if}
+</div>
