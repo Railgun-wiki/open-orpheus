@@ -11,6 +11,9 @@
   </developer>
   <url type="homepage">https://github.com/YUCLing/open-orpheus</url>
   <url type="vcs-browser">https://github.com/YUCLing/open-orpheus</url>
+  <url type="bugtracker">https://github.com/YUCLing/open-orpheus/issues</url>
+  <url type="contact">https://github.com/YUCLing/open-orpheus/discussions</url>
+  <url type="contribute">https://github.com/YUCLing/open-orpheus/blob/main/CONTRIBUTING.md</url>
 
   <metadata_license>CC-BY-4.0</metadata_license>
   <project_license>MIT</project_license>
