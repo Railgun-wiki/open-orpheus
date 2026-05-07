@@ -231,6 +231,10 @@ app.on("ready", async () => {
         // Create desktop lyrics window
         m.default();
       }),
+      import("./main/windows/mini-player").then((m) => {
+        // Create mini player window
+        m.default();
+      }),
     ]);
 
     onExit(() => {

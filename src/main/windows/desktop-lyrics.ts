@@ -88,13 +88,14 @@ export default function createDesktopLyricsWindow() {
       ) => {
         if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed()) return;
         if (os.platform() === "linux") {
-          setWindowInputRegion(
-            desktopLyricsWindow,
-            Math.round(x),
-            Math.round(y),
-            Math.max(0, Math.round(width)),
-            Math.max(0, Math.round(height))
-          );
+          setWindowInputRegion(desktopLyricsWindow, [
+            {
+              x,
+              y,
+              width,
+              height,
+            },
+          ]);
         } else {
           // In Windows/macOS, we don't need to be so specific
           const enable = width > 0 && height > 0;

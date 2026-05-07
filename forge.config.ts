@@ -96,6 +96,11 @@ const config: ForgeConfig = {
           target: "preload",
         },
         {
+          entry: "src/windows/mini-player.ts",
+          config: "vite.preload.config.ts",
+          target: "preload",
+        },
+        {
           entry: "src/windows/menu.ts",
           config: "vite.preload.config.ts",
           target: "preload",

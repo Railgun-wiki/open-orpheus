@@ -171,49 +171,43 @@ export function removeWindowProp(wnd: BrowserWindow, prop: string) {
   delete customProps[prop];
 }
 
+export interface InputRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /**
  * Sets window's input region
  *
  * Only available on Linux, for Windows and macOS, use Electron's `BrowserWindow.setIgnoreMouseEvent`.
  * @param wnd
- * @param x
- * @param y
- * @param width
- * @param height
+ * @param regions
  * @returns
  */
 export function setWindowInputRegion(
   wnd: BrowserWindow,
-  x: number,
-  y: number,
-  width: number,
-  height: number
+  regions: InputRegion[]
 ) {
   if (os.platform() !== "linux") return;
-  const region =
-    width <= 0 || height <= 0
-      ? null
-      : [
-          {
-            x,
-            y,
-            w: width,
-            h: height,
-          },
-        ];
+  const inputRegions =
+    regions.length > 0
+      ? regions.map((v) => ({ x: v.x, y: v.y, w: v.width, h: v.height }))
+      : null;
   const doSetRegion = () => {
     if (isWayland()) {
       const props = windowProperties.get(wnd.id);
       if (!props || !props.waylandId) return;
 
-      setInputRegion(props.waylandId, region);
+      setInputRegion(props.waylandId, inputRegions);
     } else {
-      setInputRegion(wnd.getNativeWindowHandle(), region);
+      setInputRegion(wnd.getNativeWindowHandle(), inputRegions);
     }
   };
   doSetRegion();
 
-  if (region) {
+  if (inputRegions) {
     const previousListener = getWindowProp<() => void>(
       wnd,
       "inputRegionShowListener"
