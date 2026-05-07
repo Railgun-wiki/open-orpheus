@@ -1,4 +1,9 @@
-import type { InputRegion } from "../../main/window";
+export interface InputRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export interface MiniPlayerContract {
   platform: NodeJS.Platform;
