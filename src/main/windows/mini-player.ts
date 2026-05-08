@@ -110,13 +110,14 @@ packManager.addEventListener("skin2packloaded", async () => {
     listSelectedBgColor,
     listPlayingBgColor,
   ] = await Promise.all(
-    [bg, listBg, listItemBg, listHoverBg, listSelectedBg, listPlayingBg]
-      .map((buf) => {
+    [bg, listBg, listItemBg, listHoverBg, listSelectedBg, listPlayingBg].map(
+      (buf) => {
         const img = photon.PhotonImage.new_from_byteslice(buf);
         const clr = extractColor(img);
         img.free();
         return clr;
-      })
+      }
+    )
   );
 
   const xml = skinBuf.toString("utf-8");

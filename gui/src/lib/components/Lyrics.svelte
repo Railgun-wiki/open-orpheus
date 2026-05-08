@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { HTMLAttributes } from "svelte/elements";
 
-  import type { LyricsData, LyricLine, LyricStyleConfig } from "$sharedTypes/lyrics";
+  import type {
+    LyricsData,
+    LyricLine,
+    LyricStyleConfig,
+  } from "$sharedTypes/lyrics";
 
   let {
     lyricsData,
