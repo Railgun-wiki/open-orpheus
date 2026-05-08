@@ -217,7 +217,7 @@
     class="size-6 cursor-pointer"
     normal="gui://skin/btn/voice.svg"
     onmousedown={noPropagation}
-    onclick={() => api.fireCall("player.onaction", "volume", "miniPlayer")}
+    onclick={() => showVolumeBar ? showVolumeBar = false : api.fireCall("player.onaction", "volume", "miniPlayer")}
   />
   <IconButton
     class="size-4 cursor-pointer"
