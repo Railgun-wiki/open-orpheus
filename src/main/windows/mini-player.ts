@@ -15,7 +15,7 @@ import SkinPack from "../packs/SkinPack";
 import { extractColor } from "../skin/color";
 import { DOMParser, Element } from "@xmldom/xmldom";
 import { argbToCss, parseBtnState } from "../skin/dui";
-import {
+import type {
   MiniPlayerLikeMark,
   MiniPlayerPlayInfo,
   MiniPlayerPlayState,
@@ -414,4 +414,9 @@ export default function createMiniPlayerWindow() {
     }
   );
   registerInputRegionHandlers(miniPlayerWindow);
+}
+
+export function hideMiniPlayerWindow() {
+  if (!miniPlayerWindow || miniPlayerWindow.isDestroyed()) return;
+  miniPlayerWindow.hide();
 }
