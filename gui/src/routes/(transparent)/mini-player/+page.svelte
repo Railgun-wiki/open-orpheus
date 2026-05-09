@@ -271,7 +271,7 @@
           {:else}
             <div class="flex size-4 items-center justify-center"></div>
           {/if}
-          <p class="flex-1">{item.title}</p>
+          <p class="flex-1 overflow-hidden whitespace-nowrap text-ellipsis">{item.title}</p>
           {#if item.program === 1}
             <IconButton
               class="group-hover/list-item:hidden"
