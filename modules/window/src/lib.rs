@@ -6,12 +6,6 @@ use napi::{
 };
 use napi_derive::napi;
 
-use crate::linux::{
-    capture_next_window_first_cursor_enter as capture_next_window_first_cursor_enter_impl,
-    get_last_created_window_id as get_last_created_window_id_impl,
-    set_input_region as set_input_region_impl,
-};
-
 #[cfg(windows)]
 pub mod windows;
 
@@ -35,11 +29,14 @@ pub enum DesktopEnvironment {
 /// Mostly for Linux to use, on Windows/macOS, returns hardcoded values.
 #[napi]
 pub fn get_desktop_environment() -> DesktopEnvironment {
-    if cfg!(target_os = "macos") {
-        DesktopEnvironment::Darwin
-    } else if cfg!(windows) {
-        DesktopEnvironment::Windows
-    } else if cfg!(target_os = "linux") {
+    #[cfg(target_os = "macos")]
+    return DesktopEnvironment::Darwin;
+
+    #[cfg(windows)]
+    return DesktopEnvironment::Windows;
+
+    #[cfg(target_os = "linux")]
+    {
         use crate::linux::{is_wayland, is_x11};
         if is_wayland() {
             DesktopEnvironment::Wayland
@@ -48,8 +45,6 @@ pub fn get_desktop_environment() -> DesktopEnvironment {
         } else {
             DesktopEnvironment::Unknown
         }
-    } else {
-        DesktopEnvironment::Unknown
     }
 }
 
@@ -60,9 +55,14 @@ pub fn get_desktop_environment() -> DesktopEnvironment {
 /// Only for Linux.
 #[napi]
 pub fn get_last_created_window_id() -> Option<String> {
-    if cfg!(target_os = "linux") {
+    #[cfg(target_os = "linux")]
+    {
+        use crate::linux::get_last_created_window_id as get_last_created_window_id_impl;
         get_last_created_window_id_impl()
-    } else {
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
         None
     }
 }
@@ -77,9 +77,16 @@ pub fn set_input_region(
         Array,
     >,
 ) -> Result<bool> {
-    if cfg!(target_os = "linux") {
+    #[cfg(target_os = "linux")]
+    {
+        use crate::linux::set_input_region as set_input_region_impl;
         set_input_region_impl(window_handle, rects)
-    } else {
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = window_handle;
+        let _ = rects;
         Ok(false)
     }
 }
@@ -95,9 +102,15 @@ pub fn capture_next_window_first_cursor_enter(
         (),
     >,
 ) -> Result<()> {
-    if cfg!(target_os = "linux") {
+    #[cfg(target_os = "linux")]
+    {
+        use crate::linux::capture_next_window_first_cursor_enter as capture_next_window_first_cursor_enter_impl;
         capture_next_window_first_cursor_enter_impl(env, callback)
-    } else {
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = callback;
         env.throw("Only supports Linux")
     }
 }
