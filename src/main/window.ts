@@ -3,7 +3,6 @@ import os from "node:os";
 import { app, BrowserWindow, shell } from "electron";
 
 import {
-  getLastCreatedWindowId,
   getDesktopEnvironment,
   setInputRegion,
   DesktopEnvironment,
@@ -13,7 +12,6 @@ import AppMenu from "./menu";
 
 type WindowProperties = {
   id?: string;
-  waylandId?: string;
   maximumSize?: { x: number; y: number };
   minimumSize?: { x: number; y: number };
   menus: Map<number, AppMenu>;
@@ -78,17 +76,14 @@ app.on("browser-window-created", (event, wnd) => {
   });
 
   if (getDesktopEnvironment() === DesktopEnvironment.Wayland) {
-    // On Wayland, windows are actually not preserved across show / hide
+    // On Wayland, windows are actually not preserved across show / hide,
+    // we will be setting their custom IDs each time they show
     wnd.on("show", () => {
-      const props = windowProperties.get(wnd.id);
-      if (!props) return;
-      props.waylandId = getLastCreatedWindowId() || undefined;
-    });
-
-    wnd.on("hide", () => {
-      const props = windowProperties.get(wnd.id);
-      if (!props) return;
-      props.waylandId = undefined;
+      const originalTitle = wnd.title;
+      wnd.setTitle("\u200B\u200C" + wnd.id);
+      // Chromium/Electron store the title internally, we will be resetting the title,
+      // thus Electron can remember the correct title.
+      wnd.setTitle(originalTitle);
     });
   }
 
@@ -198,10 +193,7 @@ export function setWindowInputRegion(
       : null;
   const doSetRegion = () => {
     if (getDesktopEnvironment() === DesktopEnvironment.Wayland) {
-      const props = windowProperties.get(wnd.id);
-      if (!props || !props.waylandId) return;
-
-      setInputRegion(props.waylandId, inputRegions);
+      setInputRegion(wnd.id.toString(), inputRegions);
     } else {
       setInputRegion(wnd.getNativeWindowHandle(), inputRegions);
     }

@@ -25,13 +25,6 @@ export declare function dragWindow(handle: Buffer): void
 export declare function getDesktopEnvironment(): DesktopEnvironment
 
 /**
- * Get the last created window's ID that represents it.
- *
- * Only for Linux.
- */
-export declare function getLastCreatedWindowId(): string | null
-
-/**
  * Set regions that the window is used to receive inputs.
  *
  * Only for Linux.
