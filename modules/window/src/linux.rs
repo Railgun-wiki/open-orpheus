@@ -41,11 +41,6 @@ pub fn is_x11() -> bool {
     x11::is_x11()
 }
 
-// TODO: Drop this way to identify wl_surface
-pub fn get_last_created_window_id() -> Option<String> {
-    wayland::get_last_created_window_id()
-}
-
 #[napi]
 pub fn drag_window(env: Env, handle: Buffer) -> Result<()> {
     if wayland::is_wayland() {

@@ -50,23 +50,6 @@ pub fn get_desktop_environment() -> DesktopEnvironment {
 
 // region: Linux methods
 
-/// Get the last created window's ID that represents it.
-///
-/// Only for Linux.
-#[napi]
-pub fn get_last_created_window_id() -> Option<String> {
-    #[cfg(target_os = "linux")]
-    {
-        use crate::linux::get_last_created_window_id as get_last_created_window_id_impl;
-        get_last_created_window_id_impl()
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        None
-    }
-}
-
 /// Set regions that the window is used to receive inputs.
 ///
 /// Only for Linux.

@@ -100,44 +100,15 @@ static CONNS: OnceLock<Mutex<HashMap<RawFd, WaylandConn>>> = OnceLock::new();
 static LAST_BUTTON: OnceLock<Mutex<Option<(RawFd, u32, u32, u32)>>> = OnceLock::new();
 static RX_BUFS: OnceLock<Mutex<HashMap<RawFd, Vec<u8>>>> = OnceLock::new();
 static TX_BUFS: OnceLock<Mutex<HashMap<RawFd, Vec<u8>>>> = OnceLock::new();
-static LAST_CREATED_WINDOW_ID: OnceLock<Mutex<Option<LastCreatedWindowId>>> = OnceLock::new();
+
+// Custom window ID map tracking user-assigned IDs via setTitle("\u{200B}\u{200C}<id>")
+static CUSTOM_ID_MAP: OnceLock<Mutex<HashMap<String, (RawFd, u32)>>> = OnceLock::new();
 
 type CursorEnterCb = Box<dyn FnOnce(i32, i32) + Send>;
 type CursorEnterWatcherKey = (RawFd, u32);
 type CursorEnterWatcherMap = HashMap<CursorEnterWatcherKey, Vec<CursorEnterCb>>;
 static NEXT_TOPLEVEL_CURSOR_ENTER: OnceLock<Mutex<Vec<CursorEnterCb>>> = OnceLock::new();
 static CURSOR_ENTER_WATCHERS: OnceLock<Mutex<CursorEnterWatcherMap>> = OnceLock::new();
-
-#[derive(Clone, Copy)]
-struct LastCreatedWindowId {
-    fd: RawFd,
-    toplevel_id: u32,
-    xdg_surface_id: u32,
-    wl_surface_id: Option<u32>,
-}
-
-impl LastCreatedWindowId {
-    fn as_token(self) -> String {
-        format!(
-            "wayland:{}:{}:{}:{}",
-            self.fd,
-            self.toplevel_id,
-            self.xdg_surface_id,
-            self.wl_surface_id.unwrap_or(0)
-        )
-    }
-}
-
-#[allow(dead_code)]
-pub(super) struct NewToplevel {
-    pub fd: RawFd,
-    pub toplevel_id: u32,
-    pub xdg_surface_id: u32,
-    pub wl_surface_id: Option<u32>,
-}
-
-type ToplevelCreatedCb = Box<dyn FnOnce(&NewToplevel) + Send>;
-static ON_TOPLEVEL_CREATED: OnceLock<Mutex<Vec<ToplevelCreatedCb>>> = OnceLock::new();
 
 // ── Object interface tags ──────────────────────────────────────────────────
 
@@ -166,12 +137,16 @@ const EVT_BUTTON: u16 = 3;
 const BTN_PRESSED: u32 = 1;
 const REQ_GET_XDG_SURFACE: u16 = 2;
 const REQ_GET_TOPLEVEL: u16 = 1;
+const REQ_SET_TITLE: u16 = 2;
 const REQ_MOVE: u16 = 5;
 const REQ_SET_INPUT_REGION: u16 = 5;
 const WL_POINTER_RELEASE: u16 = 1;
 const REQ_DESTROY: u16 = 0;
 const REQ_REGION_DESTROY: u16 = 0;
 const REQ_REGION_ADD: u16 = 1;
+
+// U+200B (Zero Width Space) and U+200C (Zero Width Non-Joiner)
+const CUSTOM_ID_PREFIX: &str = "\u{200B}\u{200C}";
 
 // ── Wire helpers ──────────────────────────────────────────────────────────
 
@@ -286,7 +261,10 @@ fn feed(
                 continue;
             }
         } else {
-            on_request(fd, oid, op, &msg);
+            let suppress = on_request(fd, oid, op, &msg);
+            if suppress {
+                continue;
+            }
         }
         out.extend_from_slice(&msg);
     }
@@ -426,17 +404,23 @@ fn handle_pointer_event(
     }
 }
 
-fn on_request(fd: RawFd, oid: u32, op: u16, msg: &[u8]) {
-    let mut new_toplevel: Option<NewToplevel> = None;
+// Returns true if the message should be suppressed
+fn on_request(fd: RawFd, oid: u32, op: u16, msg: &[u8]) -> bool {
+    let mut suppress = false;
+    let mut arm_watchers_for: Option<u32> = None;
 
     {
-        let Some(conns) = CONNS.get() else { return };
-        let Ok(mut guard) = conns.lock() else { return };
+        let Some(conns) = CONNS.get() else {
+            return false;
+        };
+        let Ok(mut guard) = conns.lock() else {
+            return false;
+        };
         let Some(conn) = guard.get_mut(&fd) else {
-            return;
+            return false;
         };
         let Some(iface) = conn.ifaces.get(&oid).copied() else {
-            return;
+            return false;
         };
 
         match (iface, op) {
@@ -484,19 +468,37 @@ fn on_request(fd: RawFd, oid: u32, op: u16, msg: &[u8]) {
                 if let Some(top_id) = ru32(msg, 8) {
                     conn.ifaces.insert(top_id, Iface::XdgToplevel);
                     conn.top_to_xdg.insert(top_id, oid);
-                    let wl_id = conn.xdg_to_wl.get(&oid).copied();
-                    if let Some(wl_id) = wl_id {
+                    if let Some(wl_id) = conn.xdg_to_wl.get(&oid).copied() {
                         conn.wl_to_top.insert(wl_id, top_id);
+                        arm_watchers_for = Some(wl_id);
                     }
-                    new_toplevel = Some(NewToplevel {
-                        fd,
-                        toplevel_id: top_id,
-                        xdg_surface_id: oid,
-                        wl_surface_id: wl_id,
-                    });
+                }
+            }
+            (Iface::XdgToplevel, REQ_SET_TITLE) => {
+                // Intercept custom IDs injected into set_title requests
+                if let Some((title, _)) = parse_wl_str(msg, 8)
+                    && let Some(custom_id) = title.strip_prefix(CUSTOM_ID_PREFIX)
+                {
+                    let xdg_id = conn.top_to_xdg.get(&oid).copied();
+                    let wl_surf = xdg_id.and_then(|xid| conn.xdg_to_wl.get(&xid).copied());
+
+                    if let Some(wl_surf) = wl_surf
+                        && let Some(m) = CUSTOM_ID_MAP.get()
+                        && let Ok(mut map) = m.lock()
+                    {
+                        map.insert(custom_id.to_string(), (fd, wl_surf));
+                    }
+                    suppress = true;
                 }
             }
             (Iface::WlSurface | Iface::XdgSurface | Iface::XdgToplevel, REQ_DESTROY) => {
+                // Clean up CUSTOM_ID_MAP tracking if surface is destroyed
+                if iface == Iface::WlSurface
+                    && let Some(m) = CUSTOM_ID_MAP.get()
+                    && let Ok(mut map) = m.lock()
+                {
+                    map.retain(|_, v| !(v.0 == fd && v.1 == oid));
+                }
                 conn.purge(oid);
             }
             (Iface::WlPointer, WL_POINTER_RELEASE) => {
@@ -506,40 +508,16 @@ fn on_request(fd: RawFd, oid: u32, op: u16, msg: &[u8]) {
         }
     }
 
-    if let Some(ref info) = new_toplevel {
-        if let Some(m) = LAST_CREATED_WINDOW_ID.get()
-            && let Ok(mut last) = m.lock()
-        {
-            *last = Some(LastCreatedWindowId {
-                fd: info.fd,
-                toplevel_id: info.toplevel_id,
-                xdg_surface_id: info.xdg_surface_id,
-                wl_surface_id: info.wl_surface_id,
-            });
-        }
-        fire_toplevel_callbacks(info);
-        arm_first_cursor_enter_watchers(info);
+    if let Some(wl_surface_id) = arm_watchers_for {
+        arm_first_cursor_enter_watchers(fd, wl_surface_id);
     }
+
+    suppress
 }
 
 // ── Callbacks / Utilities ──────────────────────────────────────────────────
 
-fn fire_toplevel_callbacks(info: &NewToplevel) {
-    if let Some(m) = ON_TOPLEVEL_CREATED.get()
-        && let Ok(mut cbs) = m.lock()
-    {
-        let callbacks: Vec<_> = cbs.drain(..).collect();
-        drop(cbs);
-        for cb in callbacks {
-            cb(info);
-        }
-    }
-}
-
-fn arm_first_cursor_enter_watchers(info: &NewToplevel) {
-    let Some(wl_surface_id) = info.wl_surface_id else {
-        return;
-    };
+fn arm_first_cursor_enter_watchers(fd: RawFd, wl_surface_id: u32) {
     let Some(pending) = NEXT_TOPLEVEL_CURSOR_ENTER.get() else {
         return;
     };
@@ -555,7 +533,7 @@ fn arm_first_cursor_enter_watchers(info: &NewToplevel) {
         && let Ok(mut watchers) = watchers.lock()
     {
         watchers
-            .entry((info.fd, wl_surface_id))
+            .entry((fd, wl_surface_id))
             .or_default()
             .extend(callbacks);
     }
@@ -658,26 +636,16 @@ pub(crate) fn on_close(fd: RawFd) {
     if let Some(m) = TX_BUFS.get() {
         let _ = m.lock().map(|mut g| g.remove(&fd));
     }
-    if let Some(m) = LAST_CREATED_WINDOW_ID.get()
-        && let Ok(mut last) = m.lock()
-        && last.is_some_and(|id| id.fd == fd)
+    if let Some(m) = CUSTOM_ID_MAP.get()
+        && let Ok(mut map) = m.lock()
     {
-        *last = None;
+        map.retain(|_, v| v.0 != fd);
     }
     clear_first_cursor_enter_watchers_for_fd(fd);
 }
 
 pub(super) fn is_wayland() -> bool {
     *IS_WAYLAND.get().unwrap_or(&false)
-}
-
-#[allow(dead_code)]
-pub(super) fn on_next_toplevel_created(cb: impl FnOnce(&NewToplevel) + Send + 'static) {
-    if let Some(m) = ON_TOPLEVEL_CREATED.get()
-        && let Ok(mut cbs) = m.lock()
-    {
-        cbs.push(Box::new(cb));
-    }
 }
 
 pub(super) fn on_next_new_window_first_cursor_enter(
@@ -691,14 +659,6 @@ pub(super) fn on_next_new_window_first_cursor_enter(
     };
     cbs.push(Box::new(cb));
     true
-}
-
-pub(super) fn get_last_created_window_id() -> Option<String> {
-    LAST_CREATED_WINDOW_ID
-        .get()
-        .and_then(|m| m.lock().ok())
-        .and_then(|id| *id)
-        .map(|id| id.as_token())
 }
 
 pub(super) fn send_xdg_toplevel_move() -> bool {
@@ -760,14 +720,13 @@ pub(super) fn send_xdg_toplevel_move() -> bool {
 // ── Input region APIs ──────────────────────────────────────────────────────
 
 fn window_id_to_fd_and_surface(window_id: &str) -> Option<(RawFd, u32)> {
-    let rest = window_id.strip_prefix("wayland:")?;
-    let parts: Vec<&str> = rest.split(':').collect();
-    if parts.len() != 4 {
-        return None;
+    if let Some(m) = CUSTOM_ID_MAP.get()
+        && let Ok(map) = m.lock()
+        && let Some(&val) = map.get(window_id)
+    {
+        return Some(val);
     }
-    let fd = parts[0].parse::<i32>().ok()?;
-    let wl_surface_id = parts[3].parse::<u32>().ok()?;
-    Some((fd, wl_surface_id))
+    None
 }
 
 fn create_region(fd: RawFd) -> Option<u32> {
@@ -864,12 +823,11 @@ pub(super) fn set_input_region_rects(window_id: &str, rects: Option<&[super::Rec
 pub(crate) fn init_state() {
     CONNS.get_or_init(|| Mutex::new(HashMap::new()));
     LAST_BUTTON.get_or_init(|| Mutex::new(None));
-    LAST_CREATED_WINDOW_ID.get_or_init(|| Mutex::new(None));
+    CUSTOM_ID_MAP.get_or_init(|| Mutex::new(HashMap::new()));
     RX_BUFS.get_or_init(|| Mutex::new(HashMap::new()));
     TX_BUFS.get_or_init(|| Mutex::new(HashMap::new()));
     NEXT_TOPLEVEL_CURSOR_ENTER.get_or_init(|| Mutex::new(Vec::new()));
     CURSOR_ENTER_WATCHERS.get_or_init(|| Mutex::new(HashMap::new()));
-    ON_TOPLEVEL_CREATED.get_or_init(|| Mutex::new(Vec::new()));
 }
 
 pub(crate) fn clear_state() {
@@ -883,10 +841,10 @@ pub(crate) fn clear_state() {
     {
         *opt = None;
     }
-    if let Some(m) = LAST_CREATED_WINDOW_ID.get()
-        && let Ok(mut opt) = m.lock()
+    if let Some(m) = CUSTOM_ID_MAP.get()
+        && let Ok(mut map) = m.lock()
     {
-        *opt = None;
+        map.clear();
     }
     if let Some(m) = RX_BUFS.get()
         && let Ok(mut map) = m.lock()
@@ -907,10 +865,5 @@ pub(crate) fn clear_state() {
         && let Ok(mut watchers) = m.lock()
     {
         watchers.clear();
-    }
-    if let Some(m) = ON_TOPLEVEL_CREATED.get()
-        && let Ok(mut cbs) = m.lock()
-    {
-        cbs.clear();
     }
 }
