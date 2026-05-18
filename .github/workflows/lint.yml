@@ -45,8 +45,12 @@ jobs:
         run: pnpm prettier --check .
 
   lint-rust:
-    name: Clippy & Rustfmt
-    runs-on: ubuntu-latest
+    name: Clippy & Rustfmt (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - name: Checkout repository
