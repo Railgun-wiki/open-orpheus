@@ -1,24 +1,17 @@
-use neon::prelude::Context;
-use neon::{
-    handle::Handle,
-    prelude::Cx,
-    result::NeonResult,
-    types::{JsBuffer, buffer::TypedArray},
-};
+use napi::{Env, Result, bindgen_prelude::Buffer};
+use napi_derive::napi;
 
-#[neon::export]
-fn drag_window<'cx>(cx: &mut Cx<'cx>, hwnd: Handle<JsBuffer>) -> NeonResult<()> {
+#[napi]
+pub fn drag_window(env: Env, hwnd: Buffer) -> Result<()> {
     use windows::Win32::{
         Foundation::{HWND, LPARAM, WPARAM},
         UI::WindowsAndMessaging::{HTCAPTION, SC_MOVE, WM_SYSCOMMAND},
         UI::{Input::KeyboardAndMouse::ReleaseCapture, WindowsAndMessaging::SendMessageW},
     };
-    let hwnd = hwnd.as_slice(cx);
     if hwnd.len() != std::mem::size_of::<isize>() {
-        let err_msg = cx.string("Invalid buffer size for window handle");
-        return cx.throw(err_msg);
+        return env.throw("Invalid buffer size for window handle");
     }
-    let hwnd = isize::from_ne_bytes(hwnd.try_into().unwrap());
+    let hwnd = isize::from_ne_bytes(hwnd.as_ref().try_into().unwrap());
     let hwnd = HWND(hwnd as _);
     unsafe {
         ReleaseCapture().unwrap();
