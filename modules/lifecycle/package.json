@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsdown"
+    "build": "tsdown",
+    "types": "tsdown"
   },
   "keywords": [],
   "author": "",
