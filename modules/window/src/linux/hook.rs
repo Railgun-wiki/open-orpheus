@@ -139,6 +139,10 @@ fn forward_msg(from: RawFd, to: RawFd, is_event: bool, app_fd: RawFd, proto: Pro
                 msg.msg_controllen = 0;
             }
 
+            let remaining = &out_data[total_sent..];
+            iov_out.iov_base = remaining.as_ptr() as *mut c_void;
+            iov_out.iov_len = remaining.len();
+
             let sent = loop {
                 let ret = unsafe { libc::sendmsg(to, &msg, libc::MSG_NOSIGNAL) };
                 if ret < 0 && unsafe { *libc::__errno_location() } == libc::EINTR {
