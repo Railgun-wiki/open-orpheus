@@ -213,6 +213,10 @@ const appModule = {
     "mkdir -p .cargo",
     "cp cargo/config .cargo/config",
 
+    // Disable supply-chain policies by adding minimumReleaseAge: 0
+    // pnpm will use the registry to verify the release age, but we are offline
+    "echo 'minimumReleaseAge: 0' >> pnpm-workspace.yaml",
+
     // Install pnpm into the (writable) build dir using FLATPAK_BUILDER_BUILDDIR
     `npm install -g --prefix $FLATPAK_BUILDER_BUILDDIR/.npm-prefix ./${pnpmTarballName}`,
 
