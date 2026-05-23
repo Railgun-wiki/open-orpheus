@@ -11,3 +11,6 @@ patchedDependencies:
   electron-installer-redhat@3.4.0: patches/electron-installer-redhat@3.4.0.patch
 blockExoticSubdeps: false
 nodeLinker: hoisted
+# See https://github.com/electron/electron/issues/51619
+overrides:
+  "yauzl@2.10.0": "^3.3.1"
