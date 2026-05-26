@@ -10,6 +10,11 @@ import { lyricCacheManager, playCacheManager, urlCacheManager } from "../cache";
 import { checkUpdate } from "../update";
 import { registerIpcHandlers } from "../../bridge/register";
 import type { ManageContract } from "../../bridge/contracts/manage-api";
+import registerAsProtocolClient, {
+  getProtocolClientName,
+  isProtocolClient,
+  unregisterAsProtocolClient,
+} from "../protocol";
 
 let manageWndInstance: BrowserWindow | null = null;
 
@@ -103,6 +108,22 @@ export default function showManageWindow() {
           await lyricCacheManager?.clear();
         } else if (category === "wasm") {
           await rm(wasmDir, { recursive: true, force: true });
+        }
+      },
+    },
+
+    protocol: {
+      isClient: async () => {
+        return isProtocolClient();
+      },
+      getClientName: async () => {
+        return getProtocolClientName();
+      },
+      setAsClient: async (event, isClient) => {
+        if (isClient) {
+          registerAsProtocolClient(true);
+        } else {
+          unregisterAsProtocolClient();
         }
       },
     },

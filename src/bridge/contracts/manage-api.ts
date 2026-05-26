@@ -17,6 +17,11 @@ export interface ManageContract {
     getStats(): Promise<AllCacheStats>;
     clearResources(category: "http" | "lyrics" | "wasm"): Promise<void>;
   };
+  protocol: {
+    isClient(): Promise<boolean>;
+    getClientName(): Promise<string>;
+    setAsClient(isClient: boolean): Promise<void>;
+  };
   gpu: {
     openInfo(): Promise<void>;
   };
