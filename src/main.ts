@@ -379,22 +379,21 @@ app.on("before-quit", () => {
 });
 
 app.on("second-instance", (event, argv) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
   const cmd = checkWebCommand(argv);
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    if (cmd) {
-      mainWindow.webContents.send(
-        "channel.call",
-        "ipc.onipcmessagerecived",
-        3,
-        cmd
-      );
-      return;
-    }
+  if (cmd) {
     mainWindow.webContents.send(
       "channel.call",
       "ipc.onipcmessagerecived",
-      1,
-      null
+      3,
+      cmd
     );
+    return;
   }
+  mainWindow.webContents.send(
+    "channel.call",
+    "ipc.onipcmessagerecived",
+    1,
+    null
+  );
 });
