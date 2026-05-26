@@ -27,7 +27,7 @@ import { CORE_VERSION } from "./constants";
 import { initializeDatabases } from "./main/database";
 import packManager from "./main/pack";
 import showPackgeDownloadWindow from "./main/windows/package-download";
-import { setMainWindow } from "./main/window";
+import { mainWindow, setMainWindow } from "./main/window";
 import {
   markStarted,
   started as appStarted,
@@ -35,6 +35,9 @@ import {
   markQuitting,
 } from "./main/lifecycle";
 import { stringifyError } from "./util";
+import registerAsProtocolClient, {
+  checkOpenCommand as checkWebCommand,
+} from "./main/protocol";
 
 import type WebPack from "./main/packs/WebPack";
 import type { ProxyConfiguration } from "./main/request";
@@ -166,6 +169,8 @@ const createWindow = () => {
     mainWindow.webContents.send("channel.call", "winhelper.onclose");
     e.preventDefault();
   });
+
+  mainWindow.webContents.openDevTools({ mode: "detach" });
 };
 
 // This method will be called when Electron has finished
@@ -332,6 +337,10 @@ app.on("ready", async () => {
 
     markStarted();
 
+    // TODO: Maybe only do this on first launch?
+    // Register as orpheus:// clent
+    registerAsProtocolClient();
+
     // Run a update check
     import("./main/update").then((m) => m.checkUpdate());
   } catch (error) {
@@ -369,9 +378,23 @@ app.on("before-quit", () => {
   markQuitting();
 });
 
-app.on("second-instance", () => {
-  const [win] = BrowserWindow.getAllWindows();
-  if (win) {
-    win.webContents.send("channel.call", "ipc.onipcmessagerecived", 1, null);
+app.on("second-instance", (event, argv) => {
+  const cmd = checkWebCommand(argv);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (cmd) {
+      mainWindow.webContents.send(
+        "channel.call",
+        "ipc.onipcmessagerecived",
+        3,
+        cmd
+      );
+      return;
+    }
+    mainWindow.webContents.send(
+      "channel.call",
+      "ipc.onipcmessagerecived",
+      1,
+      null
+    );
   }
 });

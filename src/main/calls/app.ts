@@ -44,23 +44,33 @@ registerCallHandler<string[], void>("app.exit", (event, action, ...params) => {
   app.quit();
 });
 
-registerCallHandler<[], [] | [{ movesrc: string; movedest: string }]>(
-  "app.getAppStartCommand",
-  () => {
-    const moverunIdx = process.argv.indexOf("--moverun");
-    if (moverunIdx !== -1 && process.argv.length > moverunIdx + 2) {
-      const src = process.argv[moverunIdx + 1];
-      const dest = process.argv[moverunIdx + 2];
+type StartCommand =
+  | { movesrc: string; movedest: string }
+  | {
+      webcmd: string;
+    };
+registerCallHandler<[], [] | [StartCommand]>("app.getAppStartCommand", () => {
+  for (let i = 0; i < process.argv.length; i++) {
+    const v = process.argv[i];
+    if (v === "--moverun" && process.argv.length > i + 2) {
+      const src = process.argv[i + 1];
+      const dest = process.argv[i + 2];
       return [
         {
           movesrc: src,
           movedest: dest,
         },
       ];
+    } else if (v.startsWith("orpheus://")) {
+      return [
+        {
+          webcmd: v,
+        },
+      ];
     }
-    return [];
   }
-);
+  return [];
+});
 
 registerCallHandler<[string, string], [string]>(
   "app.getLocalConfig",

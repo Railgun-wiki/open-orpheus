@@ -26,6 +26,9 @@
   import PackageIcon from "@lucide/svelte/icons/package";
   import Package from "./Package.svelte";
 
+  import CableIcon from "@lucide/svelte/icons/cable";
+  import Protocol from "./Protocol.svelte";
+
   import Database from "@lucide/svelte/icons/database";
   import LocalResources from "./LocalResources.svelte";
 
@@ -45,6 +48,12 @@
       name: "资源包",
       icon: PackageIcon,
       component: Package,
+    },
+    {
+      id: "protocol",
+      name: "协议处理",
+      icon: CableIcon,
+      component: Protocol,
     },
     {
       id: "local-resources",
