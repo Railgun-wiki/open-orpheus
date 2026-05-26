@@ -88,6 +88,11 @@ protocol.registerSchemesAsPrivileged([
 
 app.setPath("userData", userdataDir);
 
+// Allow NCM to hack on `window.channel`
+// see https://github.com/electron/electron/blob/c2a0ec9931096ec83441521c8a75449cae96cd85/shell/renderer/api/electron_api_context_bridge.cc#L37
+// see https://github.com/YUCLing/open-orpheus/pull/105#issue-4520228513
+app.commandLine.appendSwitch("enable-features", "ContextBridgeMutability");
+
 if (app.isPackaged)
   // Tell Electron we don't need a menu before Electron tries to create one,
   // this benefits the startup
