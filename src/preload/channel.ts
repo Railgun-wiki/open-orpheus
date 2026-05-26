@@ -4,6 +4,8 @@ import { dispatcher } from "./calls";
 const CALL_DEBUG = false; // Set to true to enable debug logs for channel.call
 let _callDebugId = 0;
 
+const CHANNEL_KEY_NAME = "open-orpheus.channel";
+
 const nativeCallbacks = new Map<string, (...args: unknown[]) => void>();
 
 ipcRenderer.on(
@@ -25,7 +27,7 @@ export function fireNativeCall<Args extends unknown[]>(
   callback?.(...args);
 }
 
-contextBridge.exposeInMainWorld("channel", {
+contextBridge.exposeInMainWorld(CHANNEL_KEY_NAME, {
   enData: (data: string) => ipcRenderer.sendSync("channel.enData", data),
   deData: (data: string) => ipcRenderer.sendSync("channel.deData", data),
   serialData: (data: [string, string | object]) =>
@@ -76,5 +78,35 @@ contextBridge.exposeInMainWorld("channel", {
   },
   registerCall: (cmdEvent: string, callback: (...args: unknown[]) => void) => {
     nativeCallbacks.set(cmdEvent, callback);
+  },
+  viewCall: () => {
+    // TODO: Confirm if we need to hardcode this just like this or we track?
+    return [];
+  },
+});
+
+// We need to allow NCM to hack the `window.channel`, so some of its scripts can run.
+// By default, `exposeInMainWorld`'s object is read-only (security reasons), so we are
+// creating our own copy of `window.channel` object.
+contextBridge.executeInMainWorld({
+  func: function () {
+    const channel = (
+      window as unknown as { [CHANNEL_KEY_NAME]: Record<string, unknown> }
+    )[CHANNEL_KEY_NAME];
+    const newChannel: Record<string, unknown> = {};
+    for (const k in channel) {
+      const v = channel[k];
+
+      if (typeof v === "function") {
+        newChannel[k] = function (this: unknown, ...args: unknown[]) {
+          return v.apply(this, args);
+        };
+        continue;
+      }
+
+      newChannel[k] = channel[k];
+    }
+    (window as unknown as { channel: Record<string, unknown> }).channel =
+      newChannel;
   },
 });
