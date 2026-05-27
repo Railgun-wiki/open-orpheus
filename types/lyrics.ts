@@ -19,5 +19,3 @@ export type LyricsStore = { regular: Lyrics } & Partial<
 
 export type LyricsUpdateEvent = CustomEvent<LyricsStore | null>;
 export type LyricsSloganUpdateEvent = CustomEvent<string | null>;
-export type LyricsPlayStateUpdateEvent = CustomEvent<boolean>;
-export type LyricsTimeUpdateEvent = CustomEvent<number>;
