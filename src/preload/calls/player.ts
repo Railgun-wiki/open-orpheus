@@ -1,12 +1,7 @@
 import { ipcRenderer } from "electron";
 
-import type { ShowTranslate } from "$sharedTypes/desktop-lyrics";
-
 import { player } from "../audioplayer";
-import type { TextAlignType } from "../Player";
 import { registerCallHandler } from "../calls";
-import { transformLyricStyle } from "../desktopLyrics";
-import { fireNativeCall } from "../channel";
 import type { PlayInfo } from "../../main/calls/player";
 import { imageSize } from "../../util";
 
@@ -39,111 +34,6 @@ registerCallHandler<[boolean], void>("player.setSMTCEnable", () => {
 registerCallHandler<[number], [boolean]>("player.setTotalTime", () => {
   return [true];
 });
-
-registerCallHandler<[string, string], [boolean]>(
-  "player.setTextAlign",
-  (upper, lower) => {
-    player.lyricStyle.textAlign = [
-      upper as TextAlignType,
-      lower as TextAlignType,
-    ];
-    return [true];
-  }
-);
-
-registerCallHandler<[boolean], [boolean]>(
-  "player.setLineMode",
-  (singleLine) => {
-    player.lyricStyle.lineMode = singleLine;
-    return [true];
-  }
-);
-
-registerCallHandler<[boolean], [boolean]>(
-  "player.setDesktopLyricTopMost",
-  (topMost) => {
-    player.lyricStyle.desktopTopMost = topMost;
-    return [true];
-  }
-);
-
-registerCallHandler<[ShowTranslate], [boolean]>(
-  "player.showTranslateLyric",
-  (mode) => {
-    player.lyricStyle.showTranslate = mode;
-    return [true];
-  }
-);
-
-registerCallHandler<[string, string, string, string], [boolean]>(
-  "player.setLRCColor",
-  (notPlayedTop, playedTop, notPlayedBottom, playedBottom) => {
-    player.lyricStyle.lrcColorNotPlayedTop = notPlayedTop;
-    player.lyricStyle.lrcColorPlayedTop = playedTop;
-    player.lyricStyle.lrcColorNotPlayedBottom = notPlayedBottom;
-    player.lyricStyle.lrcColorPlayedBottom = playedBottom;
-    return [true];
-  }
-);
-
-registerCallHandler<[string, string], [boolean]>(
-  "player.setOutlineColor",
-  (notPlayed, played) => {
-    player.lyricStyle.outlineColorNotPlayed = notPlayed;
-    player.lyricStyle.outlineColorPlayed = played;
-    return [true];
-  }
-);
-
-registerCallHandler<[boolean, boolean, boolean, boolean], [boolean]>(
-  "player.setOutlineShadow",
-  (a, b, c, d) => {
-    player.lyricStyle.outlineShadow = [a, b, c, d];
-    return [true];
-  }
-);
-
-registerCallHandler<[boolean], [boolean]>(
-  "player.showHorizontalLyric",
-  (horizontal) => {
-    player.lyricStyle.showHorizontal = horizontal;
-    return [true];
-  }
-);
-
-registerCallHandler<[string, string, string], [boolean]>(
-  "player.setLRCFont",
-  (fontSize, bold, fontName) => {
-    player.lyricStyle.lrcFontSize = fontSize;
-    player.lyricStyle.lrcFontBold = bold === "1";
-    player.lyricStyle.lrcFontName = fontName;
-    return [true];
-  }
-);
-
-registerCallHandler<[boolean], [boolean]>("player.setLock", (locked) => {
-  player.lyricStyle.locked = locked;
-  return [true];
-});
-
-registerCallHandler<[number], [boolean]>("player.setOffset", (offset) => {
-  player.lyricStyle.offset = offset;
-  return [true];
-});
-
-registerCallHandler<[string, string], [boolean]>(
-  "player.renderLRCImage",
-  async (text, path) => {
-    const [width, height] = await ipcRenderer.invoke(
-      "desktopLyrics.renderPreview",
-      transformLyricStyle(player.lyricStyle),
-      text,
-      path
-    );
-    fireNativeCall("player.onRenderLRCImageResult", path, true, width, height);
-    return [true];
-  }
-);
 
 registerCallHandler<[string, number], [boolean]>("player.setFont", () => {
   // What font is this?

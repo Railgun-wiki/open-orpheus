@@ -5,7 +5,6 @@ import { contextBridge } from "electron";
 
 import "./preload/channel";
 import "./preload/lyrics";
-import "./preload/desktopLyrics";
 
 import "./preload/calls/index";
 
@@ -51,11 +50,34 @@ contextBridge.executeInMainWorld({
       ] as unknown as Parameters<typeof XMLHttpRequest.prototype.open>);
     } as unknown as typeof XMLHttpRequest.prototype.open;
 
-    const OriginalImage = window.Image;
+    const OriginalImage = Image;
+    // Make sure music recognition's thumbnail preview works
     window.Image = function (width?: number, height?: number) {
       const img = new OriginalImage(width, height);
       img.crossOrigin = "anonymous";
       return img;
     } as unknown as typeof Image;
+    // Force desktop lyrics preview to refresh when updated
+    const originalSrcPropertyDescriptor = Object.getOwnPropertyDescriptor(
+      OriginalImage.prototype,
+      "src"
+    );
+    if (originalSrcPropertyDescriptor) {
+      Object.defineProperty(OriginalImage.prototype, "src", {
+        set(value) {
+          if (
+            typeof value !== "string" ||
+            value !== "orpheus://orpheus/storage/local?file=preview/font.png"
+          ) {
+            originalSrcPropertyDescriptor.set?.call(this, value);
+            return;
+          }
+          originalSrcPropertyDescriptor.set?.call(
+            this,
+            value + "&t=" + Date.now()
+          );
+        },
+      });
+    }
   },
 });

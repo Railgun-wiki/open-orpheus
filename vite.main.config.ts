@@ -25,7 +25,10 @@ function NoS3Plugin() {
 export default defineConfig({
   resolve: {
     alias: {
-      $sharedTypes: path.resolve(fileURLToPath(import.meta.url), "types"),
+      $sharedTypes: path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "types"
+      ),
     },
   },
   build: {

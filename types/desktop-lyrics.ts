@@ -1,22 +1,40 @@
-export type TextAlignType = "left" | "center" | "right";
+export enum TextAlignType {
+  Left = "left",
+  Center = "center",
+  Right = "right",
+}
+export enum LineMode {
+  Single = "single",
+  Double = "double",
+}
+export enum ShowTranslate {
+  None = "none",
+  Translate = "translate",
+  Roman = "roman",
+}
 
-export type ShowTranslate = "none" | "translate" | "roman";
+export interface LyricGradient {
+  top: string;
+  bottom: string;
+}
 
-export interface LyricStyleConfig {
-  fontFamily: string;
-  fontSize: number;
-  fontWeight: string;
+export interface LyricsStyle {
+  font: {
+    family: string;
+    size: number;
+    weight: string;
+  };
   textAlign: [TextAlignType, TextAlignType];
-  lineMode: boolean;
+  lineMode: LineMode;
   vertical: boolean;
-  colorNotPlayedTop: string;
-  colorNotPlayedBottom: string;
-  colorPlayedTop: string;
-  colorPlayedBottom: string;
-  outlineColorNotPlayed: string;
-  outlineColorPlayed: string;
-  dropShadow: string;
-  showProgress: boolean;
-  offset: number;
+  color: {
+    notPlayed: LyricGradient;
+    played: LyricGradient;
+  };
+  outline: {
+    notPlayed: string;
+    played: string;
+  };
+  dropShadow: boolean;
   showTranslate: ShowTranslate;
 }
