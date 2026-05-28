@@ -1,7 +1,5 @@
 import Emittery from "emittery";
 
-import type { ShowTranslate } from "$sharedTypes/desktop-lyrics";
-
 export enum AudioPlayerState {
   Null = 0,
   Playing = 1,
@@ -28,34 +26,6 @@ export type LyricContent = {
   romalrc: string;
   tlrc: string;
   yrc: string;
-};
-
-export type TextAlignType = "left" | "center" | "right";
-
-export type LyricStyle = {
-  // Colors
-  lrcColorNotPlayedTop: string;
-  lrcColorNotPlayedBottom: string;
-  lrcColorPlayedTop: string;
-  lrcColorPlayedBottom: string;
-  outlineColorNotPlayed: string;
-  outlineColorPlayed: string;
-  outlineShadow: [boolean, boolean, boolean, boolean];
-  // Font
-  lrcFontSize: string;
-  lrcFontBold: boolean;
-  lrcFontName: string;
-  fontName: string;
-  fontSize: number;
-  // Display
-  textAlign: [TextAlignType, TextAlignType];
-  lineMode: boolean;
-  showTranslate: ShowTranslate;
-  showHorizontal: boolean;
-  offset: number;
-  // Window
-  desktopTopMost: boolean;
-  locked: boolean;
 };
 
 export type PlaylistItem = {
@@ -119,28 +89,6 @@ export type AudioPlayInfo = {
     }
 );
 
-const DEFAULT_LYRIC_STYLE: LyricStyle = {
-  lrcColorNotPlayedTop: "",
-  lrcColorNotPlayedBottom: "",
-  lrcColorPlayedTop: "",
-  lrcColorPlayedBottom: "",
-  outlineColorNotPlayed: "",
-  outlineColorPlayed: "",
-  outlineShadow: [false, false, false, false],
-  lrcFontSize: "",
-  lrcFontBold: false,
-  lrcFontName: "",
-  fontName: "",
-  fontSize: 36,
-  textAlign: ["center", "center"],
-  lineMode: false,
-  showTranslate: "translate",
-  showHorizontal: false,
-  offset: 0,
-  desktopTopMost: false,
-  locked: false,
-};
-
 export type PlayerEvents = {
   lyriccontentupdate: LyricContent | null;
   volumechange: number;
@@ -168,7 +116,6 @@ export default class Player extends Emittery<PlayerEvents> {
   private _lyricContent: LyricContent | null = null;
 
   songInfo: SongInfo | null = null;
-  lyricStyle: LyricStyle = this._createStyleProxy(DEFAULT_LYRIC_STYLE);
   playlist: Playlist = { items: [], currentPlay: "" };
 
   // #region Getters & Setters
@@ -272,19 +219,6 @@ export default class Player extends Emittery<PlayerEvents> {
     this._audioSourceNode.disconnect();
     this._audioSourceNode.connect(this._gainNode);
     this._pcmTapNode.port.postMessage("reset");
-  }
-
-  private _createStyleProxy(style: LyricStyle): LyricStyle {
-    return new Proxy(style, {
-      set: (target, prop, value) => {
-        const oldValue = target[prop as keyof LyricStyle];
-        (target as Record<string | symbol, unknown>)[prop] = value;
-        if (oldValue !== value) {
-          this.emit("lyricstyleupdate", { key: prop, value });
-        }
-        return true;
-      },
-    });
   }
 
   async load(playInfo: AudioPlayInfo): Promise<HTMLAudioElement> {

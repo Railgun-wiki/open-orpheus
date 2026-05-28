@@ -2,21 +2,25 @@
   import type { HTMLAttributes } from "svelte/elements";
 
   import type { LyricLine } from "$sharedTypes/lyrics";
-  import type { LyricStyleConfig } from "$sharedTypes/desktop-lyrics";
+  import { LineMode, type LyricsStyle } from "$sharedTypes/desktop-lyrics";
 
   let {
     lyrics,
     secondaryLyrics = null,
     slogan = null,
     currentTime = 0,
+    offset = 0,
     lyricStyle: style,
+    useProgress = true,
     class: className,
     ...rest
   }: {
     lyrics: LyricLine[] | null;
     secondaryLyrics?: LyricLine[] | null;
-    currentTime: number;
-    lyricStyle: LyricStyleConfig;
+    currentTime?: number;
+    offset?: number;
+    lyricStyle: LyricsStyle;
+    useProgress?: boolean;
     slogan?: string | null;
   } & HTMLAttributes<HTMLDivElement> = $props();
 
@@ -91,7 +95,7 @@
     return Math.max(0, Math.min(1, filledLen / totalLen));
   }
 
-  let adjustedTime = $derived(currentTime + style.offset);
+  let adjustedTime = $derived(currentTime + offset);
   let currentIdx = $derived(
     lyrics ? findCurrentLineIndex(lyrics, adjustedTime) : -1
   );
@@ -103,7 +107,7 @@
 
   let upperIdx = $derived.by(() => {
     if (currentIdx < 0) return -1;
-    if (style.lineMode || hasSecondary) return currentIdx;
+    if (style.lineMode === LineMode.Single || hasSecondary) return currentIdx;
     // Pair: even indices on row 1, odd on row 2 → when lower is active, upper shows next
     // If next line doesn't exist, upper is empty (placeholder will fill)
     if (currentIdx % 2 === 0) return currentIdx;
@@ -113,7 +117,7 @@
 
   let lowerIdx = $derived.by(() => {
     if (currentIdx < 0) return -1;
-    if (style.lineMode || hasSecondary) return -1;
+    if (style.lineMode === LineMode.Single || hasSecondary) return -1;
     // Pair: the odd counterpart
     return currentIdx % 2 === 0 ? currentIdx + 1 : currentIdx;
   });
@@ -139,14 +143,18 @@
     const secLine = findSecondaryLine(secondaryLyrics, adjustedTime);
     if (secLine) return secLine;
     // In double-line mode with no secondary, show the paired line
-    if (!style.lineMode && lowerIdx >= 0 && lyrics[lowerIdx]) {
+    if (
+      style.lineMode === LineMode.Double &&
+      lowerIdx >= 0 &&
+      lyrics[lowerIdx]
+    ) {
       return lyrics[lowerIdx];
     }
     return null;
   });
 
   let primaryProgress = $derived(
-    primaryLine && style.showProgress
+    primaryLine && useProgress
       ? wordProgress(primaryLine, adjustedTime)
       : primaryLine
         ? 1
@@ -154,7 +162,7 @@
   );
 
   let secondaryProgress = $derived.by(() => {
-    if (!secondaryLine || !style.showProgress) return secondaryLine ? 1 : 0;
+    if (!secondaryLine || !useProgress) return secondaryLine ? 1 : 0;
     // For translation lines or next lines, compute their own progress
     return wordProgress(secondaryLine, adjustedTime);
   });
@@ -189,7 +197,7 @@
   $effect(() => {
     void primaryLine;
     void style.vertical;
-    void style.fontSize;
+    void style.font.size;
     void containerWidth;
     void containerHeight;
     requestAnimationFrame(() => {
@@ -210,7 +218,7 @@
   $effect(() => {
     void secondaryLine;
     void style.vertical;
-    void style.fontSize;
+    void style.font.size;
     void containerWidth;
     void containerHeight;
     requestAnimationFrame(() => {
@@ -237,16 +245,16 @@
 
   // Font style string
   let fontStyle = $derived(
-    `font-family: ${style.fontFamily || "sans-serif"}; font-size: ${style.fontSize}px; font-weight: ${style.fontWeight || "normal"};`
+    `font-family: ${style.font.family || "sans-serif"}; font-size: ${style.font.size}px; font-weight: ${style.font.weight || "normal"};`
   );
 
   // Gradient CSS for played/unplayed
   let gradientDir = $derived(style.vertical ? "to right" : "to bottom");
   let playedGradient = $derived(
-    `linear-gradient(${gradientDir}, ${style.colorPlayedTop || "#fff"}, ${style.colorPlayedBottom || "#fff"})`
+    `linear-gradient(${gradientDir}, ${style.color.played.top || "#fff"}, ${style.color.played.bottom || "#fff"})`
   );
   let unplayedGradient = $derived(
-    `linear-gradient(${gradientDir}, ${style.colorNotPlayedTop || "#fff"}, ${style.colorNotPlayedBottom || "#fff"})`
+    `linear-gradient(${gradientDir}, ${style.color.notPlayed.top || "#fff"}, ${style.color.notPlayed.bottom || "#fff"})`
   );
 
   // Text outline via multi-directional text-shadow (avoids -webkit-text-stroke crossing artifacts)
@@ -265,14 +273,12 @@
     ].join(", ");
   }
 
-  let unplayedOutline = $derived(
-    outlineShadow(style.outlineColorNotPlayed, 1.5)
-  );
-  let playedOutline = $derived(outlineShadow(style.outlineColorPlayed, 1.5));
+  let unplayedOutline = $derived(outlineShadow(style.outline.notPlayed, 1.5));
+  let playedOutline = $derived(outlineShadow(style.outline.played, 1.5));
 
   // Drop shadow
   let shadowStyle = $derived(
-    style.dropShadow ? `filter: drop-shadow(${style.dropShadow});` : ""
+    style.dropShadow ? `filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));` : ""
   );
 </script>
 
@@ -312,7 +318,7 @@
             >
               {primaryLine.words.map((w) => w.text).join("")}
             </span>
-            {#if style.showProgress && playedOutline}
+            {#if useProgress && playedOutline}
               <span
                 class="absolute top-0 left-0 inline text-transparent will-change-[clip-path] select-none"
                 style="
@@ -341,7 +347,7 @@
             {primaryLine.words.map((w) => w.text).join("")}
           </span>
           <!-- Played fill layer (clipped) -->
-          {#if style.showProgress}
+          {#if useProgress}
             <span
               class="absolute top-0 left-0 inline text-transparent will-change-[clip-path] select-none"
               style="
@@ -360,7 +366,7 @@
           {/if}
         </div>
       </div>
-    {:else if !style.lineMode}
+    {:else if style.lineMode === LineMode.Double}
       <div
         class="invisible leading-[1.3] {style.vertical
           ? '[writing-mode:vertical-rl]'
@@ -399,7 +405,7 @@
             >
               {secondaryLine.words.map((w) => w.text).join("")}
             </span>
-            {#if style.showProgress && playedOutline}
+            {#if useProgress && playedOutline}
               <span
                 class="absolute top-0 left-0 inline text-transparent will-change-[clip-path] select-none"
                 style="
@@ -427,7 +433,7 @@
           >
             {secondaryLine.words.map((w) => w.text).join("")}
           </span>
-          {#if style.showProgress}
+          {#if useProgress}
             <span
               class="absolute top-0 left-0 inline text-transparent will-change-[clip-path] select-none"
               style="
@@ -446,7 +452,7 @@
           {/if}
         </div>
       </div>
-    {:else if !style.lineMode}
+    {:else if style.lineMode === LineMode.Double}
       <div
         class="invisible leading-[1.3] {style.vertical
           ? '[writing-mode:vertical-rl]'

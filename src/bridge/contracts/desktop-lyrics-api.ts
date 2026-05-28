@@ -1,10 +1,11 @@
-import type { LyricStyleConfig } from "$sharedTypes/desktop-lyrics";
+import type { LyricsStyle } from "$sharedTypes/desktop-lyrics";
 
 export interface DesktopLyricsContract {
   platform: NodeJS.Platform;
   events: {
-    styleUpdate(callback: (data: Partial<LyricStyleConfig>) => void): void;
-    setLocked(callback: (locked: boolean) => void): void;
+    styleUpdate(callback: (style: LyricsStyle) => void): void;
+    lockUpdate(callback: (locked: boolean) => void): void;
+    offsetUpdate(callback: (offset: number) => void): void;
   };
   requestFullUpdate(): Promise<void>;
   dragWindow(): Promise<void>;
@@ -13,6 +14,6 @@ export interface DesktopLyricsContract {
 }
 
 export interface DesktopLyricsPreviewContract {
-  requestInit(): Promise<{ style: Record<string, unknown>; text: string }>;
+  requestInit(): Promise<{ style: LyricsStyle; text: string }>;
   ready(): Promise<void>;
 }

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Lyrics from "$lib/components/Lyrics.svelte";
-  import type { LyricStyleConfig } from "$sharedTypes/desktop-lyrics";
-  import type { LyricLine, LyricsStore } from "$sharedTypes/lyrics";
+  import LyricsComponent from "$lib/components/Lyrics.svelte";
+  import type { LyricsStyle } from "$sharedTypes/desktop-lyrics";
+  import type { Lyrics, LyricsStore } from "$sharedTypes/lyrics";
   import IconButton from "$lib/components/IconButton.svelte";
   import { cn } from "$lib/utils";
   import { getBridge } from "$lib/bridge";
@@ -18,12 +18,13 @@
 
   const api = getBridge<DesktopLyricsContract>("desktopLyrics");
 
-  let lrcLyrics: LyricLine[] | null = $state(null);
-  let perwordLyrics: LyricLine[] | null = $state(null);
-  let translateLyrics: LyricLine[] | null = $state(null);
-  let romaLyrics: LyricLine[] | null = $state(null);
+  let lrcLyrics: Lyrics | null = $state(null);
+  let perwordLyrics: Lyrics | null = $state(null);
+  let translateLyrics: Lyrics | null = $state(null);
+  let romaLyrics: Lyrics | null = $state(null);
   let slogan: string | null = $state(null);
   let currentTime = $state(0);
+  let offset = $state(0);
   let playing = $state(false);
   let locked = $state(false);
   let lyrics = $derived.by(() => {
@@ -32,6 +33,7 @@
     return null;
   });
   let secondaryLyrics = $derived.by(() => {
+    if (!lyricStyle) return null;
     if (lyricStyle.showTranslate === "translate") return translateLyrics;
     if (lyricStyle.showTranslate === "roman") return romaLyrics;
     return null;
@@ -50,30 +52,11 @@
       ["close", "close", "关闭桌面歌词"],
     ]);
 
-  const defaultStyle: LyricStyleConfig = {
-    fontFamily: "sans-serif",
-    fontSize: 36,
-    fontWeight: "normal",
-    textAlign: ["center", "center"],
-    lineMode: false,
-    vertical: false,
-    colorNotPlayedTop: "#ffffff",
-    colorNotPlayedBottom: "#cccccc",
-    colorPlayedTop: "#00ff88",
-    colorPlayedBottom: "#00cc66",
-    outlineColorNotPlayed: "transparent",
-    outlineColorPlayed: "transparent",
-    dropShadow: "0 2px 4px rgba(0,0,0,0.5)",
-    showProgress: true,
-    offset: 0,
-    showTranslate: "translate",
-  };
+  let lyricStyle = $state<LyricsStyle | null>(null);
 
-  let lyricStyle: LyricStyleConfig = $state({ ...defaultStyle });
-
-  // svelte-ignore state_referenced_locally
-  let previousVertical = lyricStyle.vertical;
+  let previousVertical = false;
   $effect(() => {
+    if (!lyricStyle) return;
     if (lyricStyle.vertical !== previousVertical) {
       previousVertical = lyricStyle.vertical;
       api.changeOrientation();
@@ -82,11 +65,15 @@
 
   onMount(() => {
     api.events.styleUpdate((data) => {
-      lyricStyle = { ...lyricStyle, ...data };
+      lyricStyle = data;
     });
 
-    api.events.setLocked((isLocked) => {
+    api.events.lockUpdate((isLocked) => {
       locked = isLocked;
+    });
+
+    api.events.offsetUpdate((newOffset) => {
+      offset = newOffset;
     });
 
     api.requestFullUpdate();
@@ -128,59 +115,62 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class={cn(
-    "group flex h-screen w-screen items-center justify-evenly overflow-hidden rounded-lg p-2 select-none",
-    !locked && "hover:bg-black/40"
-  )}
-  class:cursor-grab={!locked}
-  class:flex-col={!lyricStyle.vertical}
-  onmousedown={onDrag}
->
+{#if lyricStyle}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="flex justify-center gap-2 {api.platform === 'linux' && locked
-      ? 'opacity-25 group-hover:opacity-100'
-      : 'invisible group-hover:visible'}{lyricStyle.vertical
-      ? ' flex-col'
-      : ''}"
+    class={cn(
+      "group flex h-screen w-screen items-center justify-evenly overflow-hidden rounded-lg p-2 select-none",
+      !locked && "hover:bg-black/40"
+    )}
+    class:cursor-grab={!locked}
+    class:flex-col={!lyricStyle.vertical}
+    onmousedown={onDrag}
   >
-    {#if locked}
-      <button
-        class="size-12 cursor-pointer"
-        onclick={() => api.performAction("unlock")}
-        title="解锁桌面歌词"
-        {@attach inputRegionAttachment}
-        ><img
-          src="gui://skin/lrc/desk_icn_unlock.png"
-          alt="解锁桌面歌词"
-        /></button
-      >
-    {:else}
-      {#each items as [icon, action, title, disabled] (action)}
-        <IconButton
-          normal={`gui://skin/lrc/${icon}_normal.svg`}
-          hover={`gui://skin/lrc/${icon}_over.svg`}
-          active={`gui://skin/lrc/${icon}_push.svg`}
-          disable={`gui://skin/lrc/${icon}_dis.svg`}
-          {disabled}
-          onmousedown={(e) => {
-            e.stopPropagation();
-          }}
-          onclick={() => api.performAction(action)}
-          class="cursor-pointer"
-          imgClass="size-6"
-          {title}
-        />
-      {/each}
-    {/if}
+    <div
+      class="flex justify-center gap-2 {api.platform === 'linux' && locked
+        ? 'opacity-25 group-hover:opacity-100'
+        : 'invisible group-hover:visible'}{lyricStyle.vertical
+        ? ' flex-col'
+        : ''}"
+    >
+      {#if locked}
+        <button
+          class="size-12 cursor-pointer"
+          onclick={() => api.performAction("unlock")}
+          title="解锁桌面歌词"
+          {@attach inputRegionAttachment}
+          ><img
+            src="gui://skin/lrc/desk_icn_unlock.png"
+            alt="解锁桌面歌词"
+          /></button
+        >
+      {:else}
+        {#each items as [icon, action, title, disabled] (action)}
+          <IconButton
+            normal={`gui://skin/lrc/${icon}_normal.svg`}
+            hover={`gui://skin/lrc/${icon}_over.svg`}
+            active={`gui://skin/lrc/${icon}_push.svg`}
+            disable={`gui://skin/lrc/${icon}_dis.svg`}
+            {disabled}
+            onmousedown={(e) => {
+              e.stopPropagation();
+            }}
+            onclick={() => api.performAction(action)}
+            class="cursor-pointer"
+            imgClass="size-6"
+            {title}
+          />
+        {/each}
+      {/if}
+    </div>
+    <LyricsComponent
+      {lyrics}
+      {secondaryLyrics}
+      {currentTime}
+      {offset}
+      {lyricStyle}
+      {slogan}
+      class={lyricStyle.vertical ? "h-full" : "w-full"}
+    />
   </div>
-  <Lyrics
-    {lyrics}
-    {secondaryLyrics}
-    {currentTime}
-    {lyricStyle}
-    {slogan}
-    class={lyricStyle.vertical ? "h-full" : "w-full"}
-  />
-</div>
+{/if}

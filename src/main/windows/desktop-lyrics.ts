@@ -1,25 +1,77 @@
-import { dirname, join } from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow } from "electron";
 import photon from "@silvia-odwyer/photon-node";
+import { dragWindow } from "@open-orpheus/window";
+
+import {
+  LineMode,
+  LyricsStyle,
+  ShowTranslate,
+  TextAlignType,
+} from "$sharedTypes/desktop-lyrics";
 
 import { mainWindow, setWindowId } from "../window";
-import { dragWindow } from "@open-orpheus/window";
-import { sanitizeRelativePath } from "../util";
-import { storage } from "../folders";
 import { quitting } from "../lifecycle";
 import { registerIpcHandlers } from "../../bridge/register";
-import type { DesktopLyricsContract } from "../../bridge/contracts/desktop-lyrics-api";
+import type {
+  DesktopLyricsContract,
+  DesktopLyricsPreviewContract,
+} from "../../bridge/contracts/desktop-lyrics-api";
 import { registerInputRegionHandlers } from "../../bridge/common/inputRegion";
 import { registerLyricsHandlers } from "../../bridge/common/lyrics";
 
-let desktopLyricsWindow: BrowserWindow | null = null;
+export let desktopLyricsWindow: BrowserWindow | null = null;
 
-function sendToLyricsWindow(channel: string, data: unknown) {
-  if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
-    desktopLyricsWindow.webContents.send(channel, data);
-  }
+export const lyricsStyle: LyricsStyle = {
+  font: {
+    family: "sans-serif",
+    size: 36,
+    weight: "normal",
+  },
+  textAlign: [TextAlignType.Center, TextAlignType.Center],
+  lineMode: LineMode.Single,
+  vertical: false,
+  color: {
+    notPlayed: {
+      top: "#ffffff",
+      bottom: "#cccccc",
+    },
+    played: {
+      top: "#00ff88",
+      bottom: "#00cc66",
+    },
+  },
+  outline: {
+    notPlayed: "transparent",
+    played: "transparent",
+  },
+  dropShadow: false,
+  showTranslate: ShowTranslate.Translate,
+};
+export function refreshLyricsStyle() {
+  if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed()) return false;
+  desktopLyricsWindow.webContents.send(
+    "desktopLyrics.styleUpdate",
+    lyricsStyle
+  );
+  return true;
+}
+
+export let lyricsOffset = 0;
+export function setLyricsOffset(offset: number) {
+  lyricsOffset = offset;
+  if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed()) return false;
+  desktopLyricsWindow.webContents.send("desktopLyrics.offsetUpdate", offset);
+  return true;
+}
+
+export let lyricsLocked = false;
+export function setLyricsLocked(locked: boolean) {
+  lyricsLocked = locked;
+  if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed()) return false;
+  desktopLyricsWindow.webContents.send("desktopLyrics.lockUpdate", locked);
+  return true;
 }
 
 function performAction(action: string) {
@@ -67,9 +119,11 @@ export default function createDesktopLyricsWindow() {
     "desktopLyrics",
     {
       requestFullUpdate: async () => {
-        if (mainWindow) {
-          mainWindow.webContents.send("desktopLyrics.sendFullState");
-        }
+        if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed()) return;
+        // Can trigger updates
+        refreshLyricsStyle();
+        setLyricsOffset(lyricsOffset);
+        setLyricsLocked(lyricsLocked);
       },
       performAction: async (_event, action: string) => {
         performAction(action);
@@ -90,71 +144,13 @@ export default function createDesktopLyricsWindow() {
   registerLyricsHandlers(desktopLyricsWindow);
 }
 
-// --- IPC handlers ---
-
-ipcMain.handle(
-  "desktopLyrics.updateStyle",
-  (_event, styleUpdate: Record<string, unknown>) => {
-    sendToLyricsWindow("desktopLyrics.styleUpdate", styleUpdate);
-  }
-);
-
-ipcMain.handle("desktopLyrics.setLocked", (_event, locked: boolean) => {
-  if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
-    desktopLyricsWindow.setResizable(!locked);
-  }
-  sendToLyricsWindow("desktopLyrics.setLocked", locked);
-});
-
-ipcMain.handle("desktopLyrics.show", () => {
-  if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
-    desktopLyricsWindow.show();
-  }
-});
-
-ipcMain.handle("desktopLyrics.hide", () => {
-  if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
-    desktopLyricsWindow.hide();
-  }
-});
-
-ipcMain.handle("desktopLyrics.setTopMost", (_event, topMost: boolean) => {
-  if (desktopLyricsWindow && !desktopLyricsWindow.isDestroyed()) {
-    desktopLyricsWindow.setAlwaysOnTop(topMost);
-  }
-});
-
-ipcMain.handle(
-  "desktopLyrics.renderPreview",
-  async (
-    _event,
-    style: Record<string, unknown>,
-    text: string,
-    path: string
-  ) => {
-    const filePath = sanitizeRelativePath(storage, path);
-    if (filePath === false) {
-      console.warn(
-        "Attempted to save desktop lyrics preview to invalid path:",
-        path
-      );
-      return;
-    }
-    const [buf, size] = await createDesktopLyricsPreview(style, text);
-    await mkdir(dirname(filePath), { recursive: true });
-    await writeFile(filePath, buf);
-    return size;
-  }
-);
-
 // --- Preview ---
 
 export async function createDesktopLyricsPreview(
-  style: Record<string, unknown>,
+  style: LyricsStyle,
   text: string
 ): Promise<[Buffer, [number, number]]> {
-  const vertical = !!style.vertical;
-  const [width, height] = vertical ? [124, 310] : [310, 124];
+  const [width, height] = style.vertical ? [124, 310] : [310, 124];
 
   const previewWindow = new BrowserWindow({
     width,
@@ -172,42 +168,48 @@ export async function createDesktopLyricsPreview(
     },
   });
 
-  if (GUI_VITE_DEV_SERVER_URL) {
-    previewWindow.loadURL(`${GUI_VITE_DEV_SERVER_URL}/desktop-lyrics-preview`);
-  } else {
-    previewWindow.loadURL("gui://frontend/desktop-lyrics-preview");
-  }
-
   return new Promise<[Buffer, [number, number]]>((resolve, reject) => {
     const timeout = setTimeout(() => {
       if (!previewWindow.isDestroyed()) previewWindow.close();
       reject(new Error("Preview generation timed out"));
     }, 10000);
 
-    previewWindow.webContents.ipc.handle(
-      "desktopLyricsPreview.requestInit",
-      () => ({ style, text })
-    );
-
-    previewWindow.webContents.ipc.handle(
-      "desktopLyricsPreview.ready",
-      async () => {
-        clearTimeout(timeout);
-        try {
-          const image = await previewWindow.webContents.capturePage();
-          const photonImage = photon.PhotonImage.new_from_byteslice(
-            image.toPNG()
-          );
-          const pngBuf = photon
-            .resize(photonImage, width, height, photon.SamplingFilter.Lanczos3)
-            .get_bytes();
-          resolve([Buffer.from(pngBuf), [width, height]]);
-        } catch (err) {
-          reject(err);
-        } finally {
-          setImmediate(() => previewWindow.close());
-        }
+    registerIpcHandlers<DesktopLyricsPreviewContract>(
+      previewWindow.webContents,
+      "desktopLyricsPreview",
+      {
+        requestInit: async () => ({ style, text }),
+        ready: async () => {
+          clearTimeout(timeout);
+          try {
+            const image = await previewWindow.webContents.capturePage();
+            const photonImage = photon.PhotonImage.new_from_byteslice(
+              image.toPNG()
+            );
+            const pngBuf = photon
+              .resize(
+                photonImage,
+                width,
+                height,
+                photon.SamplingFilter.Lanczos3
+              )
+              .get_bytes();
+            resolve([Buffer.from(pngBuf), [width, height]]);
+          } catch (err) {
+            reject(err);
+          } finally {
+            setImmediate(() => previewWindow.close());
+          }
+        },
       }
     );
+
+    if (GUI_VITE_DEV_SERVER_URL) {
+      previewWindow.loadURL(
+        `${GUI_VITE_DEV_SERVER_URL}/desktop-lyrics-preview`
+      );
+    } else {
+      previewWindow.loadURL("gui://frontend/desktop-lyrics-preview");
+    }
   });
 }
