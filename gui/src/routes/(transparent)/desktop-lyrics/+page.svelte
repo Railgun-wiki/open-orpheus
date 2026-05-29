@@ -68,14 +68,15 @@
     }
   });
 
+  // This component would never be unmounted, events does not need to be removed.
+  settings.events.on("change", (e) => {
+    const { key, value } = e.data;
+    if (key !== "desktopLyrics.interpolatedLyricLine") return;
+    interpolatedLyricLine = value as boolean;
+  });
   settings.get("desktopLyrics.interpolatedLyricLine").then((v) => {
     if (v === undefined) return;
     interpolatedLyricLine = v as boolean;
-    settings.events.on("change", (e) => {
-      const { key, value } = e.data;
-      if (key !== "desktopLyrics.interpolatedLyricLine") return;
-      interpolatedLyricLine = value as boolean;
-    });
   });
 
   onMount(() => {
