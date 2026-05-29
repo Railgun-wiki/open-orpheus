@@ -13,9 +13,8 @@ overrides:
 
 patchedDependencies:
   '@keyv/sqlite': 1cada073ff6388fdb15be147fcb3f584274c9fdcf3f0db118d29570b5f40c0b2
-  cacheable-request@13.0.19: a5a83dd4f2d82c95cdbf7a8db15c307f2b9953b118f08064268ef4b958bcf797
   electron-installer-redhat@3.4.0: 8fe238a56db4de235c10dd7f02c6a523c6ac3010edcc1d547dbc5c6416b89a37
-  keyv@6.0.0-alpha.3: c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c
+  keyv@6.0.0-alpha.3: 90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685
 
 importers:
 
@@ -78,7 +77,7 @@ importers:
         version: 9.39.4
       '@keyv/sqlite':
         specifier: 6.0.0-alpha.3
-        version: 6.0.0-alpha.3(patch_hash=1cada073ff6388fdb15be147fcb3f584274c9fdcf3f0db118d29570b5f40c0b2)(keyv@6.0.0-alpha.3(patch_hash=c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c))
+        version: 6.0.0-alpha.3(patch_hash=1cada073ff6388fdb15be147fcb3f584274c9fdcf3f0db118d29570b5f40c0b2)(keyv@6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685))
       '@open-orpheus/lifecycle':
         specifier: workspace:*
         version: link:modules/lifecycle
@@ -153,7 +152,7 @@ importers:
         version: 9.0.0
       keyv:
         specifier: 6.0.0-alpha.3
-        version: 6.0.0-alpha.3(patch_hash=c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c)
+        version: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
       mime:
         specifier: ^4.1.0
         version: 4.1.0
@@ -6786,10 +6785,10 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@keyv/sqlite@6.0.0-alpha.3(patch_hash=1cada073ff6388fdb15be147fcb3f584274c9fdcf3f0db118d29570b5f40c0b2)(keyv@6.0.0-alpha.3(patch_hash=c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c))':
+  '@keyv/sqlite@6.0.0-alpha.3(patch_hash=1cada073ff6388fdb15be147fcb3f584274c9fdcf3f0db118d29570b5f40c0b2)(keyv@6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685))':
     dependencies:
       hookified: 2.2.0
-      keyv: 6.0.0-alpha.3(patch_hash=c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c)
+      keyv: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
 
   '@listr2/prompt-adapter-inquirer@2.0.22(@inquirer/prompts@6.0.1)':
     dependencies:
@@ -8347,12 +8346,12 @@ snapshots:
 
   cacheable-lookup@7.0.0: {}
 
-  cacheable-request@13.0.19(patch_hash=a5a83dd4f2d82c95cdbf7a8db15c307f2b9953b118f08064268ef4b958bcf797):
+  cacheable-request@13.0.19:
     dependencies:
       '@types/http-cache-semantics': 4.2.0
       get-stream: 9.0.1
       http-cache-semantics: 4.2.0
-      keyv: 6.0.0-alpha.3(patch_hash=c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c)
+      keyv: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
       mimic-response: 4.0.0
       normalize-url: 8.1.1
       responselike: 4.0.2
@@ -8362,7 +8361,7 @@ snapshots:
       clone-response: 1.0.3
       get-stream: 5.2.0
       http-cache-semantics: 4.2.0
-      keyv: 6.0.0-alpha.3(patch_hash=c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c)
+      keyv: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
       lowercase-keys: 2.0.0
       normalize-url: 6.1.0
       responselike: 2.0.1
@@ -9447,11 +9446,11 @@ snapshots:
       '@sindresorhus/is': 8.1.0
       byte-counter: 0.1.0
       cacheable-lookup: 7.0.0
-      cacheable-request: 13.0.19(patch_hash=a5a83dd4f2d82c95cdbf7a8db15c307f2b9953b118f08064268ef4b958bcf797)
+      cacheable-request: 13.0.19
       chunk-data: 0.1.0
       decompress-response: 10.0.0
       http2-wrapper: 2.2.1
-      keyv: 6.0.0-alpha.3(patch_hash=c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c)
+      keyv: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
       lowercase-keys: 4.0.1
       responselike: 4.0.2
       type-fest: 5.6.0
@@ -9804,7 +9803,7 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  keyv@6.0.0-alpha.3(patch_hash=c2a7f877dd959a0ac3a9ba4ecd994fbd279d0049b0b414c467ea4745455d833c): {}
+  keyv@6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685): {}
 
   kleur@4.1.5: {}
 
