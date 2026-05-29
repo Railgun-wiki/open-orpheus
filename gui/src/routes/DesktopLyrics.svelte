@@ -19,7 +19,7 @@
     class="mt-4 flex items-start gap-3 rounded-lg border p-3 hover:bg-accent/50 has-aria-checked:border-blue-600 has-aria-checked:bg-blue-50 dark:has-aria-checked:border-blue-900 dark:has-aria-checked:bg-blue-950"
   >
     <Checkbox
-      id="toggle-2"
+      id="desktop-lyrics-interpolated-lyric-line"
       bind:checked={
         () => interpolatedLyricLine ?? true,
         (v) => {
