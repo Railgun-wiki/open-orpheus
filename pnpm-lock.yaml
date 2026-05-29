@@ -12,8 +12,9 @@ overrides:
   '@keyv/sqlite>sqlite3': '-'
 
 patchedDependencies:
-  '@keyv/sqlite': edf2bf70c67f1d6735ff87fedbe197b5dd0a9fd0e6a454bd7072191ba1b96405
+  '@keyv/sqlite': 1cada073ff6388fdb15be147fcb3f584274c9fdcf3f0db118d29570b5f40c0b2
   electron-installer-redhat@3.4.0: 8fe238a56db4de235c10dd7f02c6a523c6ac3010edcc1d547dbc5c6416b89a37
+  keyv@6.0.0-alpha.3: 90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685
 
 importers:
 
@@ -76,7 +77,7 @@ importers:
         version: 9.39.4
       '@keyv/sqlite':
         specifier: 6.0.0-alpha.3
-        version: 6.0.0-alpha.3(patch_hash=edf2bf70c67f1d6735ff87fedbe197b5dd0a9fd0e6a454bd7072191ba1b96405)(keyv@6.0.0-alpha.3)
+        version: 6.0.0-alpha.3(patch_hash=1cada073ff6388fdb15be147fcb3f584274c9fdcf3f0db118d29570b5f40c0b2)(keyv@6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685))
       '@open-orpheus/lifecycle':
         specifier: workspace:*
         version: link:modules/lifecycle
@@ -151,7 +152,7 @@ importers:
         version: 9.0.0
       keyv:
         specifier: 6.0.0-alpha.3
-        version: 6.0.0-alpha.3
+        version: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
       mime:
         specifier: ^4.1.0
         version: 4.1.0
@@ -6784,10 +6785,10 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@keyv/sqlite@6.0.0-alpha.3(patch_hash=edf2bf70c67f1d6735ff87fedbe197b5dd0a9fd0e6a454bd7072191ba1b96405)(keyv@6.0.0-alpha.3)':
+  '@keyv/sqlite@6.0.0-alpha.3(patch_hash=1cada073ff6388fdb15be147fcb3f584274c9fdcf3f0db118d29570b5f40c0b2)(keyv@6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685))':
     dependencies:
       hookified: 2.2.0
-      keyv: 6.0.0-alpha.3
+      keyv: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
 
   '@listr2/prompt-adapter-inquirer@2.0.22(@inquirer/prompts@6.0.1)':
     dependencies:
@@ -8350,7 +8351,7 @@ snapshots:
       '@types/http-cache-semantics': 4.2.0
       get-stream: 9.0.1
       http-cache-semantics: 4.2.0
-      keyv: 6.0.0-alpha.3
+      keyv: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
       mimic-response: 4.0.0
       normalize-url: 8.1.1
       responselike: 4.0.2
@@ -8360,7 +8361,7 @@ snapshots:
       clone-response: 1.0.3
       get-stream: 5.2.0
       http-cache-semantics: 4.2.0
-      keyv: 6.0.0-alpha.3
+      keyv: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
       lowercase-keys: 2.0.0
       normalize-url: 6.1.0
       responselike: 2.0.1
@@ -9449,7 +9450,7 @@ snapshots:
       chunk-data: 0.1.0
       decompress-response: 10.0.0
       http2-wrapper: 2.2.1
-      keyv: 6.0.0-alpha.3
+      keyv: 6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685)
       lowercase-keys: 4.0.1
       responselike: 4.0.2
       type-fest: 5.6.0
@@ -9802,7 +9803,7 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  keyv@6.0.0-alpha.3: {}
+  keyv@6.0.0-alpha.3(patch_hash=90ba5e5df47cf0a73e3d7e3d2fbda69cdd09c33f0651dc9bad121d7782800685): {}
 
   kleur@4.1.5: {}
 

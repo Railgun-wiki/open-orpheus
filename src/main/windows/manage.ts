@@ -6,7 +6,11 @@ import { app, BrowserWindow, Menu } from "electron";
 import packManager from "../pack";
 import WebPack from "../packs/WebPack";
 import { wasm as wasmDir } from "../folders";
-import { lyricCacheManager, playCacheManager, urlCacheManager } from "../cache";
+import {
+  httpCacheStorage,
+  lyricCacheManager,
+  playCacheManager,
+} from "../cache";
 import { checkUpdate } from "../update";
 import { registerIpcHandlers } from "../../bridge/register";
 import type { ManageContract } from "../../bridge/contracts/manage-api";
@@ -65,7 +69,15 @@ export default function showManageWindow() {
       getStats: async () => {
         const [playCacheInfo, httpStats, lyrics, wasm] = await Promise.all([
           playCacheManager?.getInfo(),
-          urlCacheManager?.getStats(),
+          (async () => {
+            if (!httpCacheStorage) return undefined;
+            const [entryCount, sizeBytes, sizeBytesOnDisk] = await Promise.all([
+              httpCacheStorage.entryCount(),
+              httpCacheStorage.totalSize(),
+              httpCacheStorage.diskSize(),
+            ]);
+            return { entryCount, sizeBytes, sizeBytesOnDisk };
+          })(),
           lyricCacheManager?.getStats(),
           (async () => {
             try {
@@ -102,9 +114,11 @@ export default function showManageWindow() {
           wasm,
         };
       },
-      clearResources: async (_event, category: "http" | "lyrics" | "wasm") => {
+      clearResources: async (_event, category) => {
         if (category === "http") {
-          await urlCacheManager?.clear();
+          await httpCacheStorage?.clear();
+        } else if (category === "http:vacuum") {
+          await httpCacheStorage?.vacuum();
         } else if (category === "lyrics") {
           await lyricCacheManager?.clear();
         } else if (category === "wasm") {
