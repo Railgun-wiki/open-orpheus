@@ -70,18 +70,22 @@ ipcMain.handle(
 
       streamer.on("complete", async () => {
         if (state?.playInfo.songId !== songId) return;
-        const buf = await streamer.readBuffer();
-        playCacheManager
-          ?.cacheTrack(songId, buf, {
-            md5: playInfo.md5,
-            bitrate: playInfo.bitrate,
-            playInfoStr: playInfo.playInfoStr,
-            volumeGain: 0,
-            fileSize: buf.length,
-          })
-          .catch((err) => {
-            console.error("[audio] failed to cache track:", err);
-          });
+        try {
+          const buf = await streamer.readBuffer();
+          playCacheManager
+            ?.cacheTrack(songId, buf, {
+              md5: playInfo.md5,
+              bitrate: playInfo.bitrate,
+              playInfoStr: playInfo.playInfoStr,
+              volumeGain: 0,
+              fileSize: buf.length,
+            })
+            .catch((err) => {
+              console.error("[PlayCacheManager] Failed to cache track:", err);
+            });
+        } catch (e) {
+          console.log("Cannot get streamed track:", e);
+        }
       });
 
       streamer.on("error", (e) => {
