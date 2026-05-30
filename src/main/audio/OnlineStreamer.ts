@@ -87,6 +87,9 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
     });
 
     this.metaReadyPromise = this.prepare();
+    this.metaReadyPromise.catch((error: unknown) =>
+      this.emitError(toError(error))
+    );
   }
 
   async handleRequest(request: Request) {
