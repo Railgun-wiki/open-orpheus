@@ -286,6 +286,14 @@ app.on("ready", async () => {
     await Promise.all([
       // Initialize util module
       import("./main/util").then((m) => m.default()),
+      // Set temp dir for streamer and run cleanup
+      import("./main/audio/OnlineStreamer").then(async (m) => {
+        m.OnlineStreamer.tempDir = path.resolve(
+          os.tmpdir(),
+          "open-orpheus-streamer"
+        );
+        await m.OnlineStreamer.cleanup();
+      }),
       import("./main/afp"),
       import("./main/channel"),
       import("./main/request").then(async (m) => {

@@ -1,0 +1,320 @@
+import got from "got";
+
+import type ChunkTracker from "./ChunkTracker";
+import type StorageManager from "./StorageManager";
+
+type GotStream = ReturnType<typeof got.stream>;
+
+type DownloadSchedulerOptions = {
+  url: string;
+  toleranceThreshold: number;
+  tracker: ChunkTracker;
+  storage: StorageManager;
+  getTotalLength: () => number;
+  onProgress: () => void;
+  onComplete: () => void;
+  onError: (error: Error) => void;
+};
+
+export type UrgentSession = {
+  signal: AbortSignal;
+  abort: (reason?: unknown) => void;
+  close: () => void;
+};
+
+export default class DownloadScheduler {
+  private readonly url: string;
+  private readonly toleranceThreshold: number;
+  private readonly tracker: ChunkTracker;
+  private readonly storage: StorageManager;
+  private readonly getTotalLength: () => number;
+  private readonly onProgress: () => void;
+  private readonly onComplete: () => void;
+  private readonly onError: (error: Error) => void;
+
+  private readonly activeRequests = new Set<GotStream>();
+  private readonly backgroundController = new AbortController();
+  private urgentController: AbortController | null = null;
+  private backgroundStarted = false;
+  private destroyed = false;
+  private completeEmitted = false;
+  private writeChain: Promise<void> = Promise.resolve();
+
+  constructor(options: DownloadSchedulerOptions) {
+    this.url = options.url;
+    this.toleranceThreshold = Math.max(0, options.toleranceThreshold);
+    this.tracker = options.tracker;
+    this.storage = options.storage;
+    this.getTotalLength = options.getTotalLength;
+    this.onProgress = options.onProgress;
+    this.onComplete = options.onComplete;
+    this.onError = options.onError;
+  }
+
+  startBackground() {
+    if (this.backgroundStarted) return;
+    this.backgroundStarted = true;
+    this.runBackground().catch((error: unknown) => {
+      if (this.destroyed || this.backgroundController.signal.aborted) return;
+      this.onError(toError(error));
+    });
+  }
+
+  createUrgentSession(signal?: AbortSignal): UrgentSession {
+    this.urgentController?.abort(new Error("Superseded by a newer range"));
+
+    const controller = new AbortController();
+    const abortFromSignal = () => controller.abort(signal?.reason);
+
+    if (signal?.aborted) {
+      abortFromSignal();
+    } else {
+      signal?.addEventListener("abort", abortFromSignal, { once: true });
+    }
+
+    this.urgentController = controller;
+
+    return {
+      signal: controller.signal,
+      abort: (reason?: unknown) => controller.abort(reason),
+      close: () => {
+        signal?.removeEventListener("abort", abortFromSignal);
+        if (this.urgentController === controller) {
+          this.urgentController = null;
+        }
+      },
+    };
+  }
+
+  async *streamUrgent(start: number, end: number, signal: AbortSignal) {
+    let cursor = start;
+
+    while (cursor < end) {
+      if (signal.aborted || this.destroyed) return;
+
+      const hitEnd = this.tracker.getDownloadedEnd(cursor, end);
+      if (hitEnd > cursor) {
+        for await (const chunk of this.storage.readRange(cursor, hitEnd)) {
+          if (signal.aborted || this.destroyed) return;
+          yield chunk;
+        }
+        cursor = hitEnd;
+        continue;
+      }
+
+      const missEnd = this.tracker.getGapEnd(cursor, end);
+      let received = 0;
+
+      try {
+        for await (const chunk of this.downloadRange(
+          cursor,
+          missEnd,
+          "urgent",
+          signal
+        )) {
+          received += chunk.byteLength;
+          cursor += chunk.byteLength;
+          yield chunk;
+        }
+      } catch (error) {
+        if (signal.aborted || this.destroyed) return;
+        this.onError(toError(error));
+        throw error;
+      }
+
+      if (
+        received === 0 &&
+        this.tracker.getDownloadedEnd(cursor, end) === cursor
+      ) {
+        throw new Error(
+          "Remote stream ended before the requested range was filled"
+        );
+      }
+    }
+  }
+
+  destroy() {
+    this.destroyed = true;
+    this.backgroundController.abort(new Error("OnlineStreamer destroyed"));
+    this.urgentController?.abort(new Error("OnlineStreamer destroyed"));
+    this.urgentController = null;
+
+    for (const request of this.activeRequests) {
+      request.destroy();
+    }
+
+    this.activeRequests.clear();
+  }
+
+  private async runBackground() {
+    while (!this.destroyed && !this.backgroundController.signal.aborted) {
+      const totalLength = this.getTotalLength();
+      const [gap] = this.tracker.getMissingIntervals(0, totalLength);
+
+      if (!gap) {
+        this.emitCompleteIfNeeded();
+        return;
+      }
+
+      for await (const chunk of this.downloadRange(
+        gap.start,
+        gap.end,
+        "background",
+        this.backgroundController.signal
+      )) {
+        void chunk;
+        // The background worker only persists bytes and updates the tracker.
+      }
+    }
+  }
+
+  private async *downloadRange(
+    start: number,
+    end: number,
+    mode: "background" | "urgent",
+    signal: AbortSignal
+  ) {
+    if (end <= start || signal.aborted || this.destroyed) return;
+
+    let offset = start;
+    let stopReason: "abort" | "collision" | null = null;
+    const request = got.stream(this.url, {
+      headers: {
+        Range: `bytes=${start}-${end - 1}`,
+      },
+      retry: { limit: 0 },
+      throwHttpErrors: false,
+    });
+
+    const abortRequest = () => {
+      stopReason = "abort";
+      request.destroy(toError(signal.reason ?? "Request aborted"));
+    };
+
+    signal.addEventListener("abort", abortRequest, { once: true });
+    this.activeRequests.add(request);
+
+    try {
+      await this.waitForRangeResponse(request, start, end);
+
+      for await (const rawChunk of request) {
+        if (signal.aborted || this.destroyed) {
+          stopReason = "abort";
+          request.destroy();
+          return;
+        }
+
+        let chunk = Buffer.from(rawChunk as Uint8Array);
+        if (offset + chunk.byteLength > end) {
+          chunk = chunk.subarray(0, end - offset);
+        }
+
+        if (chunk.byteLength === 0) break;
+
+        const writeResult = await this.checkBeforeWrite(offset, chunk, end);
+        if (writeResult === "collision") {
+          stopReason = "collision";
+          request.destroy();
+          return;
+        }
+
+        offset += chunk.byteLength;
+        if (mode === "urgent") {
+          yield chunk;
+        }
+
+        if (offset >= end) {
+          request.destroy();
+          return;
+        }
+      }
+    } catch (error) {
+      if (stopReason || signal.aborted || this.destroyed) return;
+      throw error;
+    } finally {
+      signal.removeEventListener("abort", abortRequest);
+      this.activeRequests.delete(request);
+    }
+  }
+
+  private waitForRangeResponse(request: GotStream, start: number, end: number) {
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+
+      request.once("response", (response) => {
+        const totalLength = this.getTotalLength();
+        const acceptsRange = response.statusCode === 206;
+        const acceptsWholeBody =
+          response.statusCode === 200 && start === 0 && end === totalLength;
+
+        if (acceptsRange || acceptsWholeBody) {
+          settled = true;
+          resolve();
+          return;
+        }
+
+        const error = new Error(
+          `Remote source rejected range ${start}-${end - 1}: ${response.statusCode}`
+        );
+        settled = true;
+        request.destroy(error);
+        reject(error);
+      });
+
+      request.once("error", (error) => {
+        if (settled) return;
+        settled = true;
+        reject(error);
+      });
+    });
+  }
+
+  private async checkBeforeWrite(
+    offset: number,
+    chunk: Buffer,
+    rangeEnd: number
+  ) {
+    const writeTask = this.writeChain.then(async () => {
+      const collisionSpan = this.tracker.getDownloadedSpanFrom(
+        offset,
+        rangeEnd
+      );
+      if (collisionSpan > 0 && collisionSpan >= this.toleranceThreshold) {
+        return "collision" as const;
+      }
+
+      await this.storage.write(offset, chunk);
+      const addedBytes = this.tracker.addInterval(
+        offset,
+        offset + chunk.byteLength
+      );
+
+      if (addedBytes > 0) {
+        this.onProgress();
+        this.emitCompleteIfNeeded();
+      }
+
+      return "written" as const;
+    });
+
+    this.writeChain = writeTask.then(
+      () => {},
+      () => {}
+    );
+
+    return writeTask;
+  }
+
+  private emitCompleteIfNeeded() {
+    if (this.completeEmitted) return;
+    if (!this.tracker.isComplete(this.getTotalLength())) return;
+
+    this.completeEmitted = true;
+    this.onComplete();
+  }
+}
+
+function toError(error: unknown) {
+  if (error instanceof Error) return error;
+  return new Error(String(error));
+}
