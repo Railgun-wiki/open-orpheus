@@ -323,6 +323,7 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
   }
 
   private emitProgress() {
+    if (this._destroyed) return;
     void this.emit("progress", {
       loaded: this.tracker.loadedBytes,
       total: this.totalLength,
@@ -330,6 +331,7 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
   }
 
   private emitComplete() {
+    if (this._destroyed) return;
     void this.emit("complete").catch((error: unknown) => console.error(error));
   }
 

@@ -43,11 +43,10 @@ ipcMain.handle(
   "audio.updatePlayInfo",
   async (event, playInfo: AudioPlayInfo | null) => {
     if (state?.type === AudioType.URL) {
-      try {
-        await state.streamer.destroy();
-      } catch (e) {
-        console.log("Failed to destroy OnlineStreamer", e);
-      }
+      // We don't await this, let it destroy in background
+      state.streamer.destroy().catch((e) => {
+        console.error("Failed to destroy previous OnlineStreamer", e);
+      });
     }
     state = null;
     if (!playInfo) return;
@@ -70,7 +69,7 @@ ipcMain.handle(
       });
 
       streamer.on("complete", async () => {
-        if (state?.playInfo.songId !== songId || streamer.destroyed) return;
+        if (state?.playInfo.songId !== songId) return;
         const buf = await streamer.readBuffer();
         playCacheManager
           ?.cacheTrack(songId, buf, {
