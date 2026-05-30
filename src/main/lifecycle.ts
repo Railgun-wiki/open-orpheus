@@ -27,10 +27,10 @@ export let quitting = false;
 
 export function markStarted() {
   started = true;
-  events.emit("started");
+  events.emit("started").catch(console.error);
 }
 
 export function markQuitting() {
   quitting = true;
-  events.emit("quitting");
+  events.emit("quitting").catch(console.error);
 }
