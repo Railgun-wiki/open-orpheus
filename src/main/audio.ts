@@ -43,7 +43,11 @@ ipcMain.handle(
   "audio.updatePlayInfo",
   async (event, playInfo: AudioPlayInfo | null) => {
     if (state?.type) {
-      await state.streamer.destroy();
+      try {
+        await state.streamer.destroy();
+      } catch (e) {
+        console.log("Failed to destroy OnlineStreamer", e);
+      }
     }
     state = null;
     if (!playInfo) return;

@@ -98,8 +98,10 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
         });
       }
 
+      const rangeHeader = request.headers.get("range");
+      const isRangeRequest = rangeHeader !== null;
       const { start: reqStart, end: reqEnd } = parseRequestRange(
-        request.headers.get("range"),
+        rangeHeader,
         this.totalLength
       );
       const chunkLength = reqEnd - reqStart;
@@ -113,15 +115,22 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
         onCancel: session.abort,
         onClose: session.close,
       });
+      const headers = new Headers({
+        "Accept-Ranges": "bytes",
+        "Content-Type": this.mimeType,
+        "Content-Length": chunkLength.toString(),
+      });
+
+      if (isRangeRequest) {
+        headers.set(
+          "Content-Range",
+          `bytes ${reqStart}-${reqEnd - 1}/${this.totalLength}`
+        );
+      }
 
       return new Response(body, {
-        status: 206,
-        headers: new Headers({
-          "Accept-Ranges": "bytes",
-          "Content-Type": this.mimeType,
-          "Content-Length": chunkLength.toString(),
-          "Content-Range": `bytes ${reqStart}-${reqEnd - 1}/${this.totalLength}`,
-        }),
+        status: isRangeRequest ? 206 : 200,
+        headers,
       });
     } catch (error) {
       if (error instanceof RangeNotSatisfiableError) {
