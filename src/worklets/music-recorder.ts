@@ -63,11 +63,7 @@ class MusicRecorderProcessor extends AudioWorkletProcessor {
     }
 
     // Fire match windows for completed intervals
-    while (
-      !this.done &&
-      this.nextMatchFrame <= this.writeOffset &&
-      this.nextMatchFrame <= this.totalFrames
-    ) {
+    while (this.nextMatchFrame <= this.writeOffset) {
       const final = this.nextMatchFrame >= this.totalFrames;
       this.postMatch(this.nextMatchFrame, final);
       if (final) return false;
@@ -75,12 +71,6 @@ class MusicRecorderProcessor extends AudioWorkletProcessor {
         this.nextMatchFrame + this.intervalFrames,
         this.totalFrames
       );
-    }
-
-    // Final window if buffer just filled
-    if (!this.done && this.writeOffset >= this.totalFrames) {
-      this.postMatch(this.totalFrames, true);
-      return false;
     }
 
     return true;
