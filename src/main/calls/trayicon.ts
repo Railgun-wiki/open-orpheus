@@ -10,28 +10,35 @@ import * as settings from "../settings";
 import { mainWindow } from "../window";
 
 if (os.platform() === "linux") {
+  function onClickBehaviorUpdate(value: unknown) {
+    if (value === "with-native-menu") {
+      const menu = new Menu();
+      menu.append(
+        new MenuItem({
+          label: "显示菜单",
+          click: () => {
+            mainWindow?.webContents.send(
+              "channel.call",
+              "trayicon.onrightclick"
+            );
+          },
+        })
+      );
+      setMenu(menu);
+    } else {
+      setMenu(null);
+    }
+  }
   settings.events.on("change", (event) => {
     const { key, value } = event.data;
     if (key === "tray.clickBehavior") {
-      if (value === "with-native-menu") {
-        const menu = new Menu();
-        menu.append(
-          new MenuItem({
-            label: "显示菜单",
-            click: () => {
-              mainWindow?.webContents.send(
-                "channel.call",
-                "trayicon.onrightclick"
-              );
-            },
-          })
-        );
-        setMenu(menu);
-      } else {
-        setMenu(null);
-      }
+      onClickBehaviorUpdate(value);
     }
   });
+  settings.kv
+    .get("tray.clickBehavior")
+    .then((v) => onClickBehaviorUpdate(v))
+    .catch(console.error);
 }
 
 registerCallHandler<[string], void>(
