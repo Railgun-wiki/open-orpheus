@@ -109,8 +109,6 @@ export default class Player extends Emittery<PlayerEvents> {
   private _gainNode = this._audioCtx.createGain();
 
   private _honeyPotPromise: Promise<AudioWorkletNode>;
-  private _audioDataDesiredEnabled = false;
-  private _audioDataEnabled = false;
 
   private _playInfo: AudioPlayInfo | null = null;
   private _lyricContent: LyricContent | null = null;
@@ -119,37 +117,6 @@ export default class Player extends Emittery<PlayerEvents> {
   playlist: Playlist = { items: [], currentPlay: "" };
 
   // #region Getters & Setters
-  get enableAudioData() {
-    return this._audioDataEnabled;
-  }
-
-  /**
-   * Enables audio data capture.
-   *
-   * This is used for audio visualizing, so it's not targeted for reliability.
-   * Don't use it for audio capture needs that requires reliability.
-   */
-  set enableAudioData(value: boolean) {
-    if (
-      this._audioDataEnabled === value ||
-      this._audioDataDesiredEnabled !== this._audioDataEnabled
-    )
-      return;
-    this._audioDataDesiredEnabled = value;
-    (async () => {
-      const pcmHoneypot = await this._honeyPotPromise;
-      if (value) {
-        this._audioSourceNode.connect(pcmHoneypot);
-      } else {
-        this._audioSourceNode.disconnect(pcmHoneypot);
-      }
-      this._audioDataEnabled = value;
-    })().catch((err) => {
-      this._audioDataDesiredEnabled = this._audioDataEnabled;
-      console.error("Failed to enable audio data capture:", err);
-    });
-  }
-
   get lyricContent(): LyricContent | null {
     return this._lyricContent;
   }
@@ -258,5 +225,14 @@ export default class Player extends Emittery<PlayerEvents> {
         node.port.postMessage("reset");
       })
       .catch(() => {});
+  }
+
+  async setAudioDataEnabled(enabled: boolean) {
+    const node = await this._honeyPotPromise;
+    if (enabled) {
+      this._audioSourceNode.connect(node);
+    } else {
+      this._audioSourceNode.disconnect(node);
+    }
   }
 }
