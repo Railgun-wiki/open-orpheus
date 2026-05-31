@@ -248,8 +248,11 @@ export default class Player extends Emittery<PlayerEvents> {
     this._audio.currentTime = 0;
     this._audio.src = "";
     this._playInfo = null;
-    this._honeyPotPromise.then((node) => {
-      node.port.postMessage("reset");
-    });
+    // Simply try, does nothing if failed.
+    this._honeyPotPromise
+      .then((node) => {
+        node.port.postMessage("reset");
+      })
+      .catch(() => {});
   }
 }
