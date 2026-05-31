@@ -232,6 +232,7 @@ export default class Player extends Emittery<PlayerEvents> {
     if (enabled) {
       this._audioSourceNode.connect(node);
     } else {
+      node.port.postMessage("reset");
       try {
         this._audioSourceNode.disconnect(node);
       } catch (err) {
