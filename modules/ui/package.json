@@ -48,7 +48,7 @@
     "@napi-rs/cli": "^3.7.0",
     "@oxc-node/core": "^0.1.0",
     "@tybys/wasm-util": "^0.10.0",
-    "@types/node": "^25.9.1",
+    "@types/node": "^24.12.4",
     "ava": "^8.0.1",
     "typescript": "^6.0.0"
   },
