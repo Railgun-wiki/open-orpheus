@@ -19,6 +19,7 @@ import { kv as settings } from "../settings";
 import type { ProxyConfiguration, ProxyTypes } from "../request";
 import client, { getProxyAgent } from "../request";
 import { disableHardwareAccelerationFlag } from "../folders";
+import { LifecycleState, setLifecycleState } from "../lifecycle";
 
 registerCallHandler<string[], void>("app.log", (_ev, ...args) => {
   console.log(...args);
@@ -247,7 +248,7 @@ registerCallHandler<
   /* empty */
 });
 registerCallHandler<[], void>("app.appStartUpEnd", () => {
-  /* empty */
+  setLifecycleState(LifecycleState.Started);
 });
 
 registerCallHandler<[], [boolean]>("app.isRegisterDefaultClient", () => [
