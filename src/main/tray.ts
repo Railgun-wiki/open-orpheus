@@ -101,14 +101,14 @@ async function clickHandler() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   // Linux can only receives click, so a different behavior is used
   // The `onclick` will be send when main window is invisible, and `onrightclick` will be send when main window is visible
+  const clickBehavior = await settings.get("tray.clickBehavior");
   mainWindow.webContents.send(
     "channel.call",
     // We only send rightclick here if is Linux, the main window is visible, and the user has not set the click behavior to "always-show-main-window",
     // or, on Linux, if the user has set the click behavior to "always-show-menu", in which case we always send rightclick to show the menu
     os.platform() !== "linux" ||
-      ((await settings.get("tray.clickBehavior")) !== "always-show-menu" &&
-        !mainWindow.isVisible()) ||
-      (await settings.get("tray.clickBehavior")) === "always-show-main-window"
+      (clickBehavior !== "always-show-menu" && !mainWindow.isVisible()) ||
+      clickBehavior === "always-show-main-window"
       ? "trayicon.onclick"
       : "trayicon.onrightclick"
   );
