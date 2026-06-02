@@ -85,14 +85,14 @@ export function setIcon(newIcon: NativeImage) {
     newIcon = image;
   }
   icon = newIcon;
-  if (trayIcon) {
+  if (trayInstalled) {
     trayIcon.setImage(newIcon);
   }
 }
 
 export function setTooltip(newTooltip: string) {
   tooltip = newTooltip;
-  if (trayIcon) {
+  if (trayInstalled) {
     trayIcon.setToolTip(newTooltip);
   }
 }
