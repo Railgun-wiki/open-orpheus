@@ -734,12 +734,16 @@ pub(super) fn query_pointer(window: u32) -> Option<(i16, i16)> {
     write_u32(&mut payload[4..8], window, is_le);
 
     if !super::hook::send_raw_msg(real_fd, &payload) {
-        // Clean up pending state on send failure
+        // Roll back sequence tracking and pending state on send failure
         if let Some(m) = X11_CONNS.get()
             && let Ok(mut map) = m.lock()
             && let Some(conn) = map.get_mut(&fd)
         {
             conn.query_pointer_pending = None;
+            conn.injected_seqs.remove(&conn.server_seq);
+            conn.offset_transitions.pop();
+            conn.server_seq = conn.server_seq.wrapping_sub(1);
+            conn.seq_offset = conn.seq_offset.wrapping_sub(1);
         }
         return None;
     }
