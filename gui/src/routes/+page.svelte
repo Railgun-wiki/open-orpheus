@@ -189,7 +189,7 @@
                   > 开源项目以及其他<Button
                     class="px-0"
                     target="_blank"
-                    href="https://github.com/YUCLing/open-orpheus/releases/download/v{__APP_VERSION__}/LICENSES.chromium.html"
+                    href="https://github.com/YUCLing/open-orpheus/releases/download/v{__APP_VERSION__}/LICENSES.chromium.{api.platform}.html"
                     variant="link">开源软件</Button
                   >。
                 </p>

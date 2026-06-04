@@ -82,11 +82,12 @@ const config: ForgeConfig = {
       },
       // Extract LICENSES.chromium.html to a separate directory when
       // EXTRACT_LICENSES_TO is set, then remove it from the build.
-      async (buildPath, _electronVersion, _platform, _arch, callback) => {
+      async (buildPath, _electronVersion, platform, _arch, callback) => {
         const destDir = process.env.EXTRACT_LICENSES_TO;
         if (destDir) {
+          platform = platform === "mas" ? "darwin" : platform;
           const src = resolve(buildPath, "LICENSES.chromium.html");
-          const dest = resolve(destDir, "LICENSES.chromium.html");
+          const dest = resolve(destDir, `LICENSES.chromium.${platform}.html`);
           await mkdir(dirname(dest), { recursive: true });
           await copyFile(src, dest);
           await rm(src);
