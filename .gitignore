@@ -98,4 +98,5 @@ target
 /data/
 
 # Module Dist
-/modules/*/dist
+/modules/*/dist/*
+!/modules/*/dist/*.ts
