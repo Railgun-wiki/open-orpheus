@@ -159,7 +159,11 @@ Note that the core goal of this project is **interoperability**. Features intend
 
 ## Development Setup
 
-You will need Node and Rust to work with this project (Node v24 and Rust 1.96 are recommended).
+You will need Node and Rust to work with this project (Node v24 and Rust 1.96 are recommended). Also, make sure to add the WebAssembly compilation target:
+
+```sh
+rustup target add wasm32-unknown-unknown
+```
 
 For the root project, everything works just like any other Electron Forge project, but Open Orpheus has some native modules of its own, which require a few extra setup steps.
 

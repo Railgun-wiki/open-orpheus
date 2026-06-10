@@ -96,3 +96,7 @@ target
 
 # User Data
 /data/
+
+# Module Dist
+/modules/*/dist/*
+!/modules/*/dist/*.ts
