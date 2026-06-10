@@ -6,20 +6,20 @@
   import * as settings from "$lib/settings";
 
   let opacity = $state(100);
+  let storedOpacity: number | null = null;
   const opacityPromise = $state(
     (settings.get("desktopLyrics.opacity") as Promise<number>).then((v) => {
+      if (typeof v !== "number") v = 1;
       opacity = v * 100;
-      return v;
+      storedOpacity = v;
     })
   );
-  let initalOpacityEffect = true;
   $effect(() => {
-    void opacity;
-    if (initalOpacityEffect) {
-      initalOpacityEffect = false;
-      return;
+    const newValue = opacity / 100;
+    if (storedOpacity !== null && storedOpacity !== newValue) {
+      settings.set("desktopLyrics.opacity", newValue);
+      storedOpacity = newValue;
     }
-    settings.set("desktopLyrics.opacity", opacity / 100);
   });
 
   let interpolatedLyricLinePromise = $state(
