@@ -101,15 +101,54 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
         if (state.type === AudioType.Local) {
           const path = state.path;
           const fileStat = await stat(path);
-          const nodeStream = createReadStream(path);
+          const fileSize = fileStat.size;
+          const mimeType = mime.getType(path) || "application/octet-stream";
 
           sendProgress(1);
+
+          const rangeHeader = request.headers.get("Range");
+          if (rangeHeader) {
+            const match = rangeHeader.match(/^bytes=(\d+)-(\d*)$/);
+            if (match) {
+              const start = parseInt(match[1], 10);
+              const end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
+
+              if (start <= end && start < fileSize) {
+                const clampedEnd = Math.min(end, fileSize - 1);
+                const chunkSize = clampedEnd - start + 1;
+                const nodeStream = createReadStream(path, {
+                  start,
+                  end: clampedEnd,
+                });
+
+                return new Response(Readable.toWeb(nodeStream), {
+                  status: 206,
+                  headers: {
+                    "Content-Type": mimeType,
+                    "Content-Length": String(chunkSize),
+                    "Content-Range": `bytes ${start}-${clampedEnd}/${fileSize}`,
+                    "Accept-Ranges": "bytes",
+                  },
+                });
+              }
+            }
+            // Invalid or unsatisfiable range — return 416
+            return new Response("Range Not Satisfiable", {
+              status: 416,
+              headers: {
+                "Content-Range": `bytes */${fileSize}`,
+              },
+            });
+          }
+
+          const nodeStream = createReadStream(path);
 
           return new Response(Readable.toWeb(nodeStream), {
             status: 200,
             headers: {
-              "Content-Type": mime.getType(path) || "application/octet-stream",
-              "Content-Length": String(fileStat.size),
+              "Content-Type": mimeType,
+              "Content-Length": String(fileSize),
+              "Accept-Ranges": "bytes",
             },
           });
         } else if (state.type === AudioType.URL) {
