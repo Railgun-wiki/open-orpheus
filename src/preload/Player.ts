@@ -102,7 +102,7 @@ export type PlayerEvents = {
 };
 
 /**
- * Convert volume (0-1) to gain dB, logrithmic.
+ * Convert volume (0-1) to linear gain, logarithmic mapping.
  *
  * @param input
  * @returns
@@ -110,8 +110,8 @@ export type PlayerEvents = {
 function volumeToGain(input: number, minDb = 40) {
   if (input === 0) return 0;
 
-  // Convert volume to dB
-  const db = minDb * (1 - input);
+  // Convert volume to dB (negative = attenuation)
+  const db = -minDb * (1 - input);
 
   return dbToGain(db);
 }
