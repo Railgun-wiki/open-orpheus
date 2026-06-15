@@ -47,6 +47,7 @@ export default async function createMainWindow() {
     width: 1280,
     height: 720,
     show: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#18181c" : "#ffffff",
     frame: isLinuxWayland ? true : false,
     ...(isLinuxWayland
       ? {
