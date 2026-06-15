@@ -37,13 +37,18 @@ function getWindowSizeStatus(
 }
 
 export default async function createMainWindow() {
+  const isWayland =
+    process.env.WAYLAND_DISPLAY ||
+    process.env.XDG_SESSION_TYPE === "wayland";
+  const isLinuxWayland = os.platform() === "linux" && !!isWayland;
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
     show: false,
-    frame: os.platform() === "linux" ? true : false,
-    ...(os.platform() === "linux" ? { titleBarStyle: "hidden" } : {}),
+    frame: isLinuxWayland ? true : false,
+    ...(isLinuxWayland ? { titleBarStyle: "hidden" } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       additionalArguments: ["--preload-channel=main"],
