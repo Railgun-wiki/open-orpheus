@@ -42,7 +42,8 @@ export default async function createMainWindow() {
     width: 1280,
     height: 720,
     show: false,
-    frame: false,
+    frame: os.platform() === "linux" ? true : false,
+    ...(os.platform() === "linux" ? { titleBarStyle: "hidden" } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       additionalArguments: ["--preload-channel=main"],

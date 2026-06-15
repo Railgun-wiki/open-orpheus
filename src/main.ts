@@ -87,7 +87,14 @@ app.setPath("userData", userdataDir);
 // Allow NCM to hack on `window.channel`
 // see https://github.com/electron/electron/blob/c2a0ec9931096ec83441521c8a75449cae96cd85/shell/renderer/api/electron_api_context_bridge.cc#L37
 // see https://github.com/YUCLing/open-orpheus/pull/105#issue-4520228513
-app.commandLine.appendSwitch("enable-features", "ContextBridgeMutability");
+if (os.platform() === "linux") {
+  app.commandLine.appendSwitch(
+    "enable-features",
+    "ContextBridgeMutability,WaylandWindowDecorations"
+  );
+} else {
+  app.commandLine.appendSwitch("enable-features", "ContextBridgeMutability");
+}
 
 if (existsSync(disableHardwareAccelerationFlag)) {
   app.disableHardwareAcceleration();
