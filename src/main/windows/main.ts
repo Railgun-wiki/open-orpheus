@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 
-import { BrowserWindow, screen } from "electron";
+import { BrowserWindow, screen, nativeTheme } from "electron";
 
 import { setMainWindow } from "../window";
 import { hideMiniPlayerWindow } from "./mini-player";
@@ -48,7 +48,16 @@ export default async function createMainWindow() {
     height: 720,
     show: false,
     frame: isLinuxWayland ? true : false,
-    ...(isLinuxWayland ? { titleBarStyle: "hidden" } : {}),
+    ...(isLinuxWayland
+      ? {
+          titleBarStyle: "hidden",
+          titleBarOverlay: {
+            color: nativeTheme.shouldUseDarkColors ? "#18181c" : "#ffffff",
+            symbolColor: nativeTheme.shouldUseDarkColors ? "#a0a0a0" : "#333333",
+            height: 30,
+          },
+        }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       additionalArguments: ["--preload-channel=main"],
